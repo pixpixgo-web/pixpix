@@ -49,11 +49,11 @@ export function useGameMaster({
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
 
-  const processAction = useCallback(async (action: string, diceRoll?: number) => {
+  const processAction = useCallback(async (action: string, diceRoll?: number, isFreeAction: boolean = false) => {
     if (!character || isProcessing) return;
 
-    // Check action points
-    if (character.action_points <= 0) {
+    // Check action points for non-free actions
+    if (!isFreeAction && character.action_points <= 0) {
       toast({
         title: "No Action Points",
         description: "You're exhausted! Rest to recover your strength.",
@@ -68,17 +68,24 @@ export function useGameMaster({
       // Add user message first
       await addMessage('user', action);
 
-      // Deduct action point
-      await updateCharacter({ action_points: character.action_points - 1 });
+      // Deduct action point only for paid actions
+      if (!isFreeAction) {
+        await updateCharacter({ action_points: character.action_points - 1 });
+      }
 
       // Prepare game context
       const gameContext = {
         character: {
           name: character.name,
+          characterClass: character.character_class,
           hp: character.hp,
           maxHp: character.max_hp,
           gold: character.gold,
-          actionPoints: character.action_points - 1,
+          actionPoints: isFreeAction ? character.action_points : character.action_points - 1,
+          offense: character.offense,
+          defense: character.defense,
+          magic: character.magic,
+          currentZone: character.current_zone,
         },
         inventory: inventory.map(i => ({
           name: i.name,
@@ -96,6 +103,7 @@ export function useGameMaster({
           role: m.role,
           content: m.content,
         })),
+        isFreeAction,
       };
 
       // Call the AI Game Master

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Character, InventoryItem, Companion, ChatMessage, JournalEntry, GameState } from '@/types/game';
+import { Character, InventoryItem, Companion, ChatMessage, JournalEntry, GameState, CharacterClass, CHARACTER_CLASSES } from '@/types/game';
 
 const STARTING_ITEMS: Omit<InventoryItem, 'id' | 'character_id' | 'created_at'>[] = [
   { name: 'Rusty Sword', description: 'An old but reliable blade', icon: '⚔️', quantity: 1, item_type: 'weapon' },
@@ -17,6 +17,7 @@ export function useGameState(userId: string | null) {
     journal: [],
     isLoading: true,
   });
+  const [needsClassSelection, setNeedsClassSelection] = useState(false);
 
   const fetchGameState = useCallback(async () => {
     if (!userId) {
@@ -26,7 +27,7 @@ export function useGameState(userId: string | null) {
 
     try {
       // Fetch or create character
-      let { data: characters, error: charError } = await supabase
+      const { data: characters, error: charError } = await supabase
         .from('characters')
         .select('*')
         .eq('user_id', userId)
@@ -37,25 +38,19 @@ export function useGameState(userId: string | null) {
       let character: Character;
       
       if (!characters || characters.length === 0) {
-        // Create new character
-        const { data: newChar, error: createError } = await supabase
-          .from('characters')
-          .insert({ user_id: userId })
-          .select()
-          .single();
-
-        if (createError) throw createError;
-        character = newChar as Character;
-
-        // Add starting items
-        const itemsToInsert = STARTING_ITEMS.map(item => ({
-          ...item,
-          character_id: character.id,
-        }));
-
-        await supabase.from('inventory_items').insert(itemsToInsert);
+        // No character exists - need class selection
+        setNeedsClassSelection(true);
+        setGameState(prev => ({ ...prev, isLoading: false }));
+        return;
       } else {
         character = characters[0] as Character;
+        
+        // Check if character still has default class (needs selection)
+        if (character.character_class === 'adventurer') {
+          setNeedsClassSelection(true);
+          setGameState(prev => ({ ...prev, character, isLoading: false }));
+          return;
+        }
       }
 
       // Fetch related data
@@ -74,6 +69,7 @@ export function useGameState(userId: string | null) {
         journal: (journalRes.data || []) as JournalEntry[],
         isLoading: false,
       });
+      setNeedsClassSelection(false);
     } catch (error) {
       console.error('Error fetching game state:', error);
       setGameState(prev => ({ ...prev, isLoading: false }));
@@ -204,14 +200,74 @@ export function useGameState(userId: string | null) {
     }
   }, [gameState.character, gameState.journal.length]);
 
+  const createCharacterWithClass = useCallback(async (name: string, selectedClass: CharacterClass) => {
+    if (!userId) return;
+
+    try {
+      // Check if character already exists
+      const { data: existing } = await supabase
+        .from('characters')
+        .select('id')
+        .eq('user_id', userId)
+        .limit(1);
+
+      if (existing && existing.length > 0) {
+        // Update existing character
+        const { error } = await supabase
+          .from('characters')
+          .update({
+            name,
+            character_class: selectedClass.id,
+            offense: selectedClass.offense,
+            defense: selectedClass.defense,
+            magic: selectedClass.magic,
+          })
+          .eq('id', existing[0].id);
+
+        if (error) throw error;
+      } else {
+        // Create new character
+        const { data: newChar, error: createError } = await supabase
+          .from('characters')
+          .insert({
+            user_id: userId,
+            name,
+            character_class: selectedClass.id,
+            offense: selectedClass.offense,
+            defense: selectedClass.defense,
+            magic: selectedClass.magic,
+          })
+          .select()
+          .single();
+
+        if (createError) throw createError;
+
+        // Add starting items
+        const itemsToInsert = STARTING_ITEMS.map(item => ({
+          ...item,
+          character_id: newChar.id,
+        }));
+
+        await supabase.from('inventory_items').insert(itemsToInsert);
+      }
+
+      setNeedsClassSelection(false);
+      await fetchGameState();
+    } catch (error) {
+      console.error('Error creating character:', error);
+    }
+  }, [userId, fetchGameState]);
+
   return {
     ...gameState,
+    needsClassSelection,
     updateCharacter,
     addMessage,
     addCompanion,
     updateCompanion,
     addInventoryItem,
     addJournalEntry,
+    createCharacterWithClass,
     refreshGameState: fetchGameState,
   };
 }

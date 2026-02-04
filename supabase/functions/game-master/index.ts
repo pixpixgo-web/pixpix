@@ -8,10 +8,15 @@ const corsHeaders = {
 interface GameContext {
   character: {
     name: string;
+    characterClass: string;
     hp: number;
     maxHp: number;
     gold: number;
     actionPoints: number;
+    offense: number;
+    defense: number;
+    magic: number;
+    currentZone: string;
   };
   inventory: Array<{ name: string; description: string | null; quantity: number }>;
   companions: Array<{
@@ -22,6 +27,7 @@ interface GameContext {
     trust: number;
   }>;
   recentMessages: Array<{ role: string; content: string }>;
+  isFreeAction: boolean;
 }
 
 serve(async (req) => {
@@ -59,14 +65,25 @@ serve(async (req) => {
         ).join('\n')}`
       : '\n\nPlayer has no items.';
 
+    // Determine action type context
+    const actionTypeContext = gameContext.isFreeAction 
+      ? `\n\nACTION TYPE: FREE ACTION - This is a non-combat action (talking, looking, etc). Do NOT consume AP or trigger dangerous encounters.`
+      : `\n\nACTION TYPE: PAID ACTION - This action costs AP and can trigger combat or dangerous events.`;
+
     const systemPrompt = `You are an immersive Game Master for a dark fantasy RPG set in a medieval world. Your responses should be atmospheric, engaging, and reactive to the player's choices.
 
 CURRENT GAME STATE:
-- Character: ${gameContext.character.name}
+- Character: ${gameContext.character.name} (${gameContext.character.characterClass})
+- Location: ${gameContext.character.currentZone}
 - HP: ${gameContext.character.hp}/${gameContext.character.maxHp}
 - Gold: ${gameContext.character.gold}
 - Action Points: ${gameContext.character.actionPoints}
-${inventoryContext}${companionContext}
+- Stats: Offense ${gameContext.character.offense}/10, Defense ${gameContext.character.defense}/10, Magic ${gameContext.character.magic}/10
+${inventoryContext}${companionContext}${actionTypeContext}
+
+STAT SCALING (1-10):
+- Use these stats to determine success likelihood. Higher offense = more damage, higher defense = less damage taken, higher magic = more powerful spells.
+- Compare player stats to enemy difficulty when calculating outcomes.
 
 RULES:
 1. Always respond in second person ("You walk into...", "You see...")
@@ -83,6 +100,8 @@ RULES:
    - Medium trust (40-69): Companions are neutral, may hesitate
    - Low trust (<40): Companions might betray, refuse orders, or leave
 7. When combat happens, narrate companion actions based on their personality
+8. For FREE ACTIONS: Do not trigger combat or dangerous events. Just describe the scene/conversation.
+9. For PAID ACTIONS: Combat, travel, and risky actions can have consequences.
 
 ${diceRoll ? `\nDICE ROLL RESULT: ${diceRoll} (1-9: failure, 10-14: partial success, 15-19: success, 20: critical success, 1: critical failure)` : ''}
 
