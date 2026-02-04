@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LogIn, LogOut, Scroll, BookOpen, Users, Sword } from 'lucide-react';
+import { LogIn, LogOut, BookOpen, Users, Sword, Shield, Sparkles, MapPin } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useGameState } from '@/hooks/useGameState';
 import { useGameMaster } from '@/hooks/useGameMaster';
@@ -10,11 +10,16 @@ import { Journal } from '@/components/game/Journal';
 import { DiceRoller } from '@/components/game/DiceRoller';
 import { AdventureLog } from '@/components/game/AdventureLog';
 import { ActionInput } from '@/components/game/ActionInput';
+import { LoreDrawer } from '@/components/game/LoreDrawer';
+import { RestButton } from '@/components/game/RestButton';
+import { ClassSelection } from '@/components/game/ClassSelection';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
+import { ZONES, CharacterClass } from '@/types/game';
 
 function AuthForm() {
   const [isLogin, setIsLogin] = useState(true);
@@ -124,9 +129,41 @@ function GameInterface({ userId }: { userId: string }) {
   const [lastDiceRoll, setLastDiceRoll] = useState<number | null>(null);
   const { toast } = useToast();
 
-  const handleAction = async (action: string) => {
-    await processAction(action, lastDiceRoll ?? undefined);
+  const handleAction = async (action: string, isFreeAction: boolean) => {
+    await processAction(action, lastDiceRoll ?? undefined, isFreeAction);
     setLastDiceRoll(null);
+  };
+
+  const handleRest = async (isAmbushed: boolean) => {
+    if (!gameState.character) return;
+
+    const zone = ZONES[gameState.character.current_zone] || ZONES.tavern;
+    const apRecovered = Math.ceil((gameState.character.max_action_points * zone.restRecovery) / 100);
+
+    if (isAmbushed) {
+      toast({
+        title: "Ambush!",
+        description: "You were attacked while resting!",
+        variant: "destructive",
+      });
+      // Process the ambush as a game action
+      await processAction("I was ambushed while trying to rest!", undefined, false);
+    } else {
+      await gameState.updateCharacter({
+        action_points: Math.min(
+          gameState.character.max_action_points,
+          gameState.character.action_points + apRecovered
+        ),
+      });
+      toast({
+        title: "Rested",
+        description: `You recovered ${apRecovered} Action Points.`,
+      });
+    }
+  };
+
+  const handleClassSelection = async (name: string, selectedClass: CharacterClass) => {
+    await gameState.createCharacterWithClass(name, selectedClass);
   };
 
   const handleSignOut = async () => {
@@ -146,6 +183,11 @@ function GameInterface({ userId }: { userId: string }) {
     );
   }
 
+  // Show class selection if needed
+  if (gameState.needsClassSelection) {
+    return <ClassSelection onComplete={handleClassSelection} />;
+  }
+
   if (!gameState.character) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -153,6 +195,8 @@ function GameInterface({ userId }: { userId: string }) {
       </div>
     );
   }
+
+  const currentZone = ZONES[gameState.character.current_zone] || ZONES.tavern;
 
   return (
     <div className="min-h-screen bg-background p-4">
@@ -162,15 +206,36 @@ function GameInterface({ userId }: { userId: string }) {
           <Sword className="w-6 h-6" />
           Old Greg's Tavern
         </h1>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleSignOut}
-          className="text-muted-foreground hover:text-foreground"
-        >
-          <LogOut className="w-4 h-4 mr-2" />
-          Leave Tavern
-        </Button>
+        <div className="flex items-center gap-4">
+          {/* Character Class Badge */}
+          <div className="hidden md:flex items-center gap-2 text-sm">
+            <span className="text-muted-foreground">{gameState.character.name}</span>
+            <Badge variant="outline" className="gold-border">
+              {gameState.character.character_class}
+            </Badge>
+          </div>
+          {/* Stats */}
+          <div className="hidden lg:flex items-center gap-3 text-xs">
+            <span className="flex items-center gap-1 text-destructive">
+              <Sword className="w-3 h-3" /> {gameState.character.offense}
+            </span>
+            <span className="flex items-center gap-1 text-blue-400">
+              <Shield className="w-3 h-3" /> {gameState.character.defense}
+            </span>
+            <span className="flex items-center gap-1 text-purple-400">
+              <Sparkles className="w-3 h-3" /> {gameState.character.magic}
+            </span>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleSignOut}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <LogOut className="w-4 h-4 mr-2" />
+            Leave Tavern
+          </Button>
+        </div>
       </header>
 
       {/* Main Layout */}
@@ -183,6 +248,11 @@ function GameInterface({ userId }: { userId: string }) {
           />
           <DiceRoller 
             onRoll={setLastDiceRoll}
+            disabled={isProcessing}
+          />
+          <RestButton
+            character={gameState.character}
+            onRest={handleRest}
             disabled={isProcessing}
           />
         </div>
@@ -198,6 +268,7 @@ function GameInterface({ userId }: { userId: string }) {
           <ActionInput
             onSubmit={handleAction}
             actionPoints={gameState.character.action_points}
+            currentZone={gameState.character.current_zone}
             disabled={isProcessing}
           />
         </div>
@@ -224,6 +295,13 @@ function GameInterface({ userId }: { userId: string }) {
           </Tabs>
         </div>
       </div>
+
+      {/* Lore Drawer */}
+      <LoreDrawer
+        character={gameState.character}
+        inventory={gameState.inventory}
+        companions={gameState.companions}
+      />
     </div>
   );
 }

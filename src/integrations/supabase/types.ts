@@ -17,37 +17,52 @@ export type Database = {
       characters: {
         Row: {
           action_points: number
+          character_class: string | null
           created_at: string
+          current_zone: string | null
+          defense: number | null
           gold: number
           hp: number
           id: string
+          magic: number | null
           max_action_points: number
           max_hp: number
           name: string
+          offense: number | null
           updated_at: string
           user_id: string
         }
         Insert: {
           action_points?: number
+          character_class?: string | null
           created_at?: string
+          current_zone?: string | null
+          defense?: number | null
           gold?: number
           hp?: number
           id?: string
+          magic?: number | null
           max_action_points?: number
           max_hp?: number
           name?: string
+          offense?: number | null
           updated_at?: string
           user_id: string
         }
         Update: {
           action_points?: number
+          character_class?: string | null
           created_at?: string
+          current_zone?: string | null
+          defense?: number | null
           gold?: number
           hp?: number
           id?: string
+          magic?: number | null
           max_action_points?: number
           max_hp?: number
           name?: string
+          offense?: number | null
           updated_at?: string
           user_id?: string
         }

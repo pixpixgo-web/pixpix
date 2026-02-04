@@ -1,11 +1,12 @@
 import { motion } from 'framer-motion';
-import { Heart, Coins, Zap, Package } from 'lucide-react';
-import { Character, InventoryItem } from '@/types/game';
+import { Heart, Coins, Zap, Package, Sword, Shield, Sparkles, MapPin } from 'lucide-react';
+import { Character, InventoryItem, ZONES, CHARACTER_CLASSES } from '@/types/game';
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { Badge } from '@/components/ui/badge';
 
 interface CharacterSheetProps {
   character: Character;
@@ -14,12 +15,29 @@ interface CharacterSheetProps {
 
 export function CharacterSheet({ character, inventory }: CharacterSheetProps) {
   const hpPercentage = (character.hp / character.max_hp) * 100;
+  const zone = ZONES[character.current_zone] || ZONES.tavern;
+  const charClass = CHARACTER_CLASSES.find(c => c.id === character.character_class);
 
   return (
     <div className="parchment rounded-lg p-4 space-y-4">
-      <h2 className="font-medieval text-lg text-primary gold-glow">
-        {character.name}
-      </h2>
+      {/* Name & Class */}
+      <div className="flex items-center justify-between">
+        <h2 className="font-medieval text-lg text-primary gold-glow">
+          {character.name}
+        </h2>
+        <Badge variant="outline" className="gold-border text-xs">
+          {charClass?.icon} {charClass?.name || character.character_class}
+        </Badge>
+      </div>
+
+      {/* Zone */}
+      <div className="flex items-center gap-2 text-sm">
+        <MapPin className="w-4 h-4 text-muted-foreground" />
+        <span className="text-muted-foreground">{zone.name}</span>
+        {zone.type === 'danger' && (
+          <Badge variant="destructive" className="text-xs">Danger</Badge>
+        )}
+      </div>
 
       {/* HP Bar */}
       <div className="space-y-1">
@@ -72,6 +90,37 @@ export function CharacterSheet({ character, inventory }: CharacterSheetProps) {
             />
           ))}
         </div>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-2 text-center">
+        <Tooltip>
+          <TooltipTrigger>
+            <div className="p-2 bg-secondary/30 rounded-lg">
+              <Sword className="w-4 h-4 mx-auto text-destructive mb-1" />
+              <span className="text-sm font-medium">{character.offense}</span>
+            </div>
+          </TooltipTrigger>
+          <TooltipContent>Offense (Attack Power)</TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger>
+            <div className="p-2 bg-secondary/30 rounded-lg">
+              <Shield className="w-4 h-4 mx-auto text-blue-400 mb-1" />
+              <span className="text-sm font-medium">{character.defense}</span>
+            </div>
+          </TooltipTrigger>
+          <TooltipContent>Defense (Damage Reduction)</TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger>
+            <div className="p-2 bg-secondary/30 rounded-lg">
+              <Sparkles className="w-4 h-4 mx-auto text-purple-400 mb-1" />
+              <span className="text-sm font-medium">{character.magic}</span>
+            </div>
+          </TooltipTrigger>
+          <TooltipContent>Magic (Spell Power)</TooltipContent>
+        </Tooltip>
       </div>
 
       {/* Inventory */}
