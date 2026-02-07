@@ -26,7 +26,6 @@ export function useGameState(userId: string | null) {
     }
 
     try {
-      // Fetch or create character
       const { data: characters, error: charError } = await supabase
         .from('characters')
         .select('*')
@@ -35,25 +34,20 @@ export function useGameState(userId: string | null) {
 
       if (charError) throw charError;
 
-      let character: Character;
-      
       if (!characters || characters.length === 0) {
-        // No character exists - need class selection
         setNeedsClassSelection(true);
         setGameState(prev => ({ ...prev, isLoading: false }));
         return;
-      } else {
-        character = characters[0] as Character;
-        
-        // Check if character still has default class (needs selection)
-        if (character.character_class === 'adventurer') {
-          setNeedsClassSelection(true);
-          setGameState(prev => ({ ...prev, character, isLoading: false }));
-          return;
-        }
       }
 
-      // Fetch related data
+      const character = characters[0] as Character;
+
+      if (character.character_class === 'adventurer') {
+        setNeedsClassSelection(true);
+        setGameState(prev => ({ ...prev, character, isLoading: false }));
+        return;
+      }
+
       const [inventoryRes, companionsRes, messagesRes, journalRes] = await Promise.all([
         supabase.from('inventory_items').select('*').eq('character_id', character.id),
         supabase.from('companions').select('*').eq('character_id', character.id),
@@ -101,20 +95,13 @@ export function useGameState(userId: string | null) {
 
     const { data, error } = await supabase
       .from('chat_messages')
-      .insert({
-        character_id: gameState.character.id,
-        role,
-        content,
-      })
+      .insert({ character_id: gameState.character.id, role, content })
       .select()
       .single();
 
     if (!error && data) {
       const newMessage = data as ChatMessage;
-      setGameState(prev => ({
-        ...prev,
-        messages: [...prev.messages, newMessage],
-      }));
+      setGameState(prev => ({ ...prev, messages: [...prev.messages, newMessage] }));
       return newMessage;
     }
     return null;
@@ -125,33 +112,22 @@ export function useGameState(userId: string | null) {
 
     const { data, error } = await supabase
       .from('companions')
-      .insert({
-        ...companion,
-        character_id: gameState.character.id,
-      })
+      .insert({ ...companion, character_id: gameState.character.id })
       .select()
       .single();
 
     if (!error && data) {
-      setGameState(prev => ({
-        ...prev,
-        companions: [...prev.companions, data as Companion],
-      }));
+      setGameState(prev => ({ ...prev, companions: [...prev.companions, data as Companion] }));
     }
   }, [gameState.character]);
 
   const updateCompanion = useCallback(async (companionId: string, updates: Partial<Companion>) => {
-    const { error } = await supabase
-      .from('companions')
-      .update(updates)
-      .eq('id', companionId);
+    const { error } = await supabase.from('companions').update(updates).eq('id', companionId);
 
     if (!error) {
       setGameState(prev => ({
         ...prev,
-        companions: prev.companions.map(c => 
-          c.id === companionId ? { ...c, ...updates } : c
-        ),
+        companions: prev.companions.map(c => c.id === companionId ? { ...c, ...updates } : c),
       }));
     }
   }, []);
@@ -161,93 +137,90 @@ export function useGameState(userId: string | null) {
 
     const { data, error } = await supabase
       .from('inventory_items')
-      .insert({
-        ...item,
-        character_id: gameState.character.id,
-      })
+      .insert({ ...item, character_id: gameState.character.id })
       .select()
       .single();
 
     if (!error && data) {
-      setGameState(prev => ({
-        ...prev,
-        inventory: [...prev.inventory, data as InventoryItem],
-      }));
+      setGameState(prev => ({ ...prev, inventory: [...prev.inventory, data as InventoryItem] }));
     }
   }, [gameState.character]);
+
+  const removeInventoryItem = useCallback(async (itemName: string) => {
+    if (!gameState.character) return;
+
+    const item = gameState.inventory.find(i => i.name.toLowerCase() === itemName.toLowerCase());
+    if (!item) return;
+
+    if (item.quantity > 1) {
+      await supabase.from('inventory_items').update({ quantity: item.quantity - 1 }).eq('id', item.id);
+      setGameState(prev => ({
+        ...prev,
+        inventory: prev.inventory.map(i => i.id === item.id ? { ...i, quantity: i.quantity - 1 } : i),
+      }));
+    } else {
+      await supabase.from('inventory_items').delete().eq('id', item.id);
+      setGameState(prev => ({
+        ...prev,
+        inventory: prev.inventory.filter(i => i.id !== item.id),
+      }));
+    }
+  }, [gameState.character, gameState.inventory]);
 
   const addJournalEntry = useCallback(async (title: string, content: string) => {
     if (!gameState.character) return;
 
     const entryNumber = gameState.journal.length + 1;
-
     const { data, error } = await supabase
       .from('journal_entries')
-      .insert({
-        character_id: gameState.character.id,
-        title,
-        content,
-        entry_number: entryNumber,
-      })
+      .insert({ character_id: gameState.character.id, title, content, entry_number: entryNumber })
       .select()
       .single();
 
     if (!error && data) {
-      setGameState(prev => ({
-        ...prev,
-        journal: [...prev.journal, data as JournalEntry],
-      }));
+      setGameState(prev => ({ ...prev, journal: [...prev.journal, data as JournalEntry] }));
     }
   }, [gameState.character, gameState.journal.length]);
 
-  const createCharacterWithClass = useCallback(async (name: string, selectedClass: CharacterClass) => {
+  const createCharacterWithClass = useCallback(async (name: string, selectedClass: CharacterClass, backstory: string) => {
     if (!userId) return;
 
     try {
-      // Check if character already exists
       const { data: existing } = await supabase
         .from('characters')
         .select('id')
         .eq('user_id', userId)
         .limit(1);
 
-      if (existing && existing.length > 0) {
-        // Update existing character
-        const { error } = await supabase
-          .from('characters')
-          .update({
-            name,
-            character_class: selectedClass.id,
-            offense: selectedClass.offense,
-            defense: selectedClass.defense,
-            magic: selectedClass.magic,
-          })
-          .eq('id', existing[0].id);
+      const charData = {
+        name,
+        character_class: selectedClass.id,
+        offense: selectedClass.offense,
+        defense: selectedClass.defense,
+        magic: selectedClass.magic,
+        max_stamina: selectedClass.maxStamina,
+        stamina: selectedClass.maxStamina,
+        max_mana: selectedClass.maxMana,
+        mana: selectedClass.maxMana,
+        backstory: backstory || null,
+      };
 
+      if (existing && existing.length > 0) {
+        const { error } = await supabase.from('characters').update(charData).eq('id', existing[0].id);
         if (error) throw error;
       } else {
-        // Create new character
         const { data: newChar, error: createError } = await supabase
           .from('characters')
-          .insert({
-            user_id: userId,
-            name,
-            character_class: selectedClass.id,
-            offense: selectedClass.offense,
-            defense: selectedClass.defense,
-            magic: selectedClass.magic,
-          })
+          .insert({ user_id: userId, ...charData })
           .select()
           .single();
 
         if (createError) throw createError;
 
-        // Add starting items
         const itemsToInsert = STARTING_ITEMS.map(item => ({
           ...item,
           character_id: newChar.id,
         }));
-
         await supabase.from('inventory_items').insert(itemsToInsert);
       }
 
@@ -258,6 +231,32 @@ export function useGameState(userId: string | null) {
     }
   }, [userId, fetchGameState]);
 
+  const deleteCharacter = useCallback(async () => {
+    if (!gameState.character) return;
+
+    const charId = gameState.character.id;
+
+    // Delete all related data, then the character
+    await Promise.all([
+      supabase.from('chat_messages').delete().eq('character_id', charId),
+      supabase.from('inventory_items').delete().eq('character_id', charId),
+      supabase.from('companions').delete().eq('character_id', charId),
+      supabase.from('journal_entries').delete().eq('character_id', charId),
+    ]);
+
+    await supabase.from('characters').delete().eq('id', charId);
+
+    setGameState({
+      character: null,
+      inventory: [],
+      companions: [],
+      messages: [],
+      journal: [],
+      isLoading: false,
+    });
+    setNeedsClassSelection(true);
+  }, [gameState.character]);
+
   return {
     ...gameState,
     needsClassSelection,
@@ -266,8 +265,10 @@ export function useGameState(userId: string | null) {
     addCompanion,
     updateCompanion,
     addInventoryItem,
+    removeInventoryItem,
     addJournalEntry,
     createCharacterWithClass,
+    deleteCharacter,
     refreshGameState: fetchGameState,
   };
 }

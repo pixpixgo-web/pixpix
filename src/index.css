@@ -57,6 +57,11 @@
     --parchment-dark: 35 25% 75%;
     --magic-blue: 210 70% 45%;
     --companion-green: 142 50% 35%;
+    --stamina-bar: 35 80% 45%;
+    --stamina-bar-bg: 35 40% 18%;
+    --mana-bar: 210 70% 45%;
+    --mana-bar-bg: 210 40% 18%;
+    --xp-bar: 45 80% 50%;
 
     /* Gradients */
     --gradient-gold: linear-gradient(135deg, hsl(38 70% 50%), hsl(45 80% 60%));
