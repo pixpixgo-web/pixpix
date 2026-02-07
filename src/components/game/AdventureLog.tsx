@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import { ChatMessage } from '@/types/game';
@@ -12,17 +12,27 @@ interface AdventureLogProps {
 export function AdventureLog({ messages, isLoading }: AdventureLogProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // Only show the 4 most recent messages (2 exchanges) in the log
+  const visibleMessages = useMemo(() => {
+    return messages.slice(-4);
+  }, [messages]);
+
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages]);
+  }, [visibleMessages]);
 
   return (
     <div className="flex flex-col h-full">
       <h3 className="font-medieval text-sm text-primary mb-3 flex items-center gap-2 px-1">
         <Scroll className="w-4 h-4" />
         Adventure Log
+        {messages.length > 4 && (
+          <span className="text-xs text-muted-foreground font-normal ml-auto">
+            (showing recent — full history in Journal)
+          </span>
+        )}
       </h3>
 
       <div
@@ -42,7 +52,7 @@ export function AdventureLog({ messages, isLoading }: AdventureLogProps) {
         )}
 
         <AnimatePresence mode="popLayout">
-          {messages.map((message) => (
+          {visibleMessages.map((message) => (
             <motion.div
               key={message.id}
               initial={{ opacity: 0, y: 20 }}
@@ -67,14 +77,10 @@ export function AdventureLog({ messages, isLoading }: AdventureLogProps) {
                         </p>
                       ),
                       strong: ({ children }) => (
-                        <strong className="text-primary font-semibold">
-                          {children}
-                        </strong>
+                        <strong className="text-primary font-semibold">{children}</strong>
                       ),
                       em: ({ children }) => (
-                        <em className="text-muted-foreground italic">
-                          {children}
-                        </em>
+                        <em className="text-muted-foreground italic">{children}</em>
                       ),
                     }}
                   >
@@ -87,11 +93,7 @@ export function AdventureLog({ messages, isLoading }: AdventureLogProps) {
         </AnimatePresence>
 
         {isLoading && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="log-entry log-entry-dm"
-          >
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="log-entry log-entry-dm">
             <div className="flex items-center gap-2">
               <Crown className="w-4 h-4 text-primary animate-pulse" />
               <div className="flex gap-1">

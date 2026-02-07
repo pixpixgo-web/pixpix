@@ -17,6 +17,7 @@ export type Database = {
       characters: {
         Row: {
           action_points: number
+          backstory: string | null
           character_class: string | null
           created_at: string
           current_zone: string | null
@@ -24,16 +25,23 @@ export type Database = {
           gold: number
           hp: number
           id: string
+          level: number
           magic: number | null
+          mana: number
           max_action_points: number
           max_hp: number
+          max_mana: number
+          max_stamina: number
           name: string
           offense: number | null
+          stamina: number
           updated_at: string
           user_id: string
+          xp: number
         }
         Insert: {
           action_points?: number
+          backstory?: string | null
           character_class?: string | null
           created_at?: string
           current_zone?: string | null
@@ -41,16 +49,23 @@ export type Database = {
           gold?: number
           hp?: number
           id?: string
+          level?: number
           magic?: number | null
+          mana?: number
           max_action_points?: number
           max_hp?: number
+          max_mana?: number
+          max_stamina?: number
           name?: string
           offense?: number | null
+          stamina?: number
           updated_at?: string
           user_id: string
+          xp?: number
         }
         Update: {
           action_points?: number
+          backstory?: string | null
           character_class?: string | null
           created_at?: string
           current_zone?: string | null
@@ -58,13 +73,19 @@ export type Database = {
           gold?: number
           hp?: number
           id?: string
+          level?: number
           magic?: number | null
+          mana?: number
           max_action_points?: number
           max_hp?: number
+          max_mana?: number
+          max_stamina?: number
           name?: string
           offense?: number | null
+          stamina?: number
           updated_at?: string
           user_id?: string
+          xp?: number
         }
         Relationships: []
       }

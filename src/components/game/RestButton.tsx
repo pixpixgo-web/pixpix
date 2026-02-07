@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Moon, AlertTriangle } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -24,15 +24,16 @@ export function RestButton({ character, onRest, disabled }: RestButtonProps) {
 
   const currentZone: Zone = ZONES[character.current_zone] || ZONES.tavern;
   const isDanger = currentZone.type === 'danger';
+  const isFullStamina = character.stamina >= character.max_stamina;
+  const isFullMana = character.mana >= character.max_mana;
+
+  const staminaRecovery = Math.ceil((character.max_stamina * currentZone.restRecovery) / 100);
+  const manaRecovery = Math.ceil((character.max_mana * currentZone.restRecovery) / 100);
 
   const handleRest = async () => {
     setIsResting(true);
-    
-    // Check for ambush in danger zones
     const isAmbushed = isDanger && Math.random() * 100 < currentZone.ambushChance;
-    
     await onRest(isAmbushed);
-    
     setIsResting(false);
     setShowDialog(false);
   };
@@ -41,7 +42,7 @@ export function RestButton({ character, onRest, disabled }: RestButtonProps) {
     <>
       <Button
         onClick={() => setShowDialog(true)}
-        disabled={disabled || character.action_points >= character.max_action_points}
+        disabled={disabled || (isFullStamina && isFullMana)}
         variant="outline"
         className="gold-border w-full"
       >
@@ -59,11 +60,11 @@ export function RestButton({ character, onRest, disabled }: RestButtonProps) {
             <DialogDescription asChild>
               <div className="space-y-3 pt-2">
                 <p>
-                  Resting here will restore{' '}
-                  <span className="text-primary font-medium">
-                    {Math.ceil((character.max_action_points * currentZone.restRecovery) / 100)} AP
-                  </span>{' '}
-                  ({currentZone.restRecovery}% recovery).
+                  Resting restores up to{' '}
+                  <span className="text-gold-coin font-medium">+{staminaRecovery} Stamina</span>
+                  {' and '}
+                  <span className="text-magic-blue font-medium">+{manaRecovery} Mana</span>
+                  {' '}({currentZone.restRecovery}% recovery).
                 </p>
 
                 {isDanger && (
@@ -76,7 +77,7 @@ export function RestButton({ character, onRest, disabled }: RestButtonProps) {
                     <div>
                       <p className="font-medium text-destructive">Danger Zone!</p>
                       <p className="text-sm text-muted-foreground">
-                        There's a {currentZone.ambushChance}% chance of being ambushed while resting here.
+                        {currentZone.ambushChance}% chance of ambush while resting.
                       </p>
                     </div>
                   </motion.div>
@@ -86,9 +87,7 @@ export function RestButton({ character, onRest, disabled }: RestButtonProps) {
           </DialogHeader>
 
           <DialogFooter className="gap-2">
-            <Button variant="ghost" onClick={() => setShowDialog(false)}>
-              Cancel
-            </Button>
+            <Button variant="ghost" onClick={() => setShowDialog(false)}>Cancel</Button>
             <Button
               onClick={handleRest}
               disabled={isResting}
@@ -96,10 +95,7 @@ export function RestButton({ character, onRest, disabled }: RestButtonProps) {
               variant={isDanger ? 'destructive' : 'outline'}
             >
               {isResting ? (
-                <motion.span
-                  animate={{ opacity: [1, 0.5, 1] }}
-                  transition={{ repeat: Infinity, duration: 1 }}
-                >
+                <motion.span animate={{ opacity: [1, 0.5, 1] }} transition={{ repeat: Infinity, duration: 1 }}>
                   Resting...
                 </motion.span>
               ) : (
