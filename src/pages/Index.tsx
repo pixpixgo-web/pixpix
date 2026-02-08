@@ -11,7 +11,7 @@ import { DiceRoller } from '@/components/game/DiceRoller';
 import { AdventureLog } from '@/components/game/AdventureLog';
 import { ActionInput } from '@/components/game/ActionInput';
 import { LoreDrawer } from '@/components/game/LoreDrawer';
-import { RestButton } from '@/components/game/RestButton';
+import { StatsModal } from '@/components/game/StatsModal';
 import { ClassSelection } from '@/components/game/ClassSelection';
 import { LevelUpModal } from '@/components/game/LevelUpModal';
 import { RevengeTracker } from '@/components/game/RevengeTracker';
@@ -32,7 +32,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { ZONES, CharacterClass, Character } from '@/types/game';
+import { CharacterClass, Character } from '@/types/game';
 
 function AuthForm() {
   const [isLogin, setIsLogin] = useState(true);
@@ -103,6 +103,7 @@ function GameInterface({ userId }: { userId: string }) {
   });
   const { toast } = useToast();
   const [showLevelUp, setShowLevelUp] = useState(false);
+  const [showStats, setShowStats] = useState(false);
 
   // Auto-show level up modal when stat points are available
   useEffect(() => {
@@ -119,24 +120,6 @@ function GameInterface({ userId }: { userId: string }) {
     await processAction(action, isFreeAction);
   };
 
-  const handleRest = async (isAmbushed: boolean) => {
-    if (!gameState.character) return;
-
-    const zone = ZONES[gameState.character.current_zone] || ZONES.tavern;
-
-    if (isAmbushed) {
-      toast({ title: "Ambush!", description: "You were attacked while resting!", variant: "destructive" });
-      await processAction("I was ambushed while trying to rest!", false);
-    } else {
-      const staminaRecovered = Math.ceil((gameState.character.max_stamina * zone.restRecovery) / 100);
-      const manaRecovered = Math.ceil((gameState.character.max_mana * zone.restRecovery) / 100);
-      await gameState.updateCharacter({
-        stamina: Math.min(gameState.character.max_stamina, gameState.character.stamina + staminaRecovered),
-        mana: Math.min(gameState.character.max_mana, gameState.character.mana + manaRecovered),
-      });
-      toast({ title: "Rested", description: `Recovered +${staminaRecovered} Stamina, +${manaRecovered} Mana.` });
-    }
-  };
 
   const handleClassSelection = async (name: string, selectedClass: CharacterClass, backstory: string) => {
     await gameState.createCharacterWithClass(name, selectedClass, backstory);
@@ -241,7 +224,14 @@ function GameInterface({ userId }: { userId: string }) {
         {/* Left Sidebar */}
         <div className="lg:col-span-3 space-y-4">
           <CharacterSheet character={gameState.character} inventory={gameState.inventory} />
-          <RestButton character={gameState.character} onRest={handleRest} disabled={isProcessing} />
+          <Button
+            onClick={() => setShowStats(true)}
+            variant="outline"
+            className="gold-border w-full"
+          >
+            <Sparkles className="w-4 h-4 mr-2" />
+            View Full Stats
+          </Button>
         </div>
 
         {/* Center */}
@@ -299,12 +289,19 @@ function GameInterface({ userId }: { userId: string }) {
 
       {/* Level Up Modal */}
       {gameState.character && (
-        <LevelUpModal
-          character={gameState.character}
-          open={showLevelUp}
-          onClose={() => setShowLevelUp(false)}
-          onAllocate={handleStatAllocate}
-        />
+        <>
+          <LevelUpModal
+            character={gameState.character}
+            open={showLevelUp}
+            onClose={() => setShowLevelUp(false)}
+            onAllocate={handleStatAllocate}
+          />
+          <StatsModal
+            character={gameState.character}
+            open={showStats}
+            onClose={() => setShowStats(false)}
+          />
+        </>
       )}
     </div>
   );
