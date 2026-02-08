@@ -127,7 +127,8 @@ function GameInterface({ userId }: { userId: string }) {
       // First create the character
       await gameState.createCharacterWithClass(name, selectedClass, backstory);
 
-      // Then generate the origin story
+      // Generate origin story in parallel — do NOT refreshGameState yet
+      // as that would exit the creation flow before we apply updates
       const { data, error } = await supabase.functions.invoke('generate-origin', {
         body: {
           backstory,
@@ -139,60 +140,80 @@ function GameInterface({ userId }: { userId: string }) {
 
       if (error || data?.error) {
         console.error('Origin generation failed:', error || data?.error);
-        // Fallback: keep tavern, no bonus items
+        // Fallback: just load with defaults
+        await gameState.refreshGameState();
         setIsCreatingOrigin(false);
         return;
       }
 
-      // Wait for character to be fully created first
-      await gameState.refreshGameState();
-
-      // Apply origin results: zone, bonus items, skill boosts, intro narrative
+      // Build all updates to apply in a single DB call
       const updates: Partial<Character> = {};
 
       if (data.startingZone) {
         updates.current_zone = data.startingZone;
       }
 
-      // Apply skill boosts - read fresh character from refreshed state
+      // Apply skill boosts
       if (data.skillBoosts && typeof data.skillBoosts === 'object') {
         for (const [key, value] of Object.entries(data.skillBoosts)) {
           if (typeof value === 'number') {
-            (updates as any)[key] = value; // Set directly since these are boosts on top of base 0
+            (updates as any)[key] = value;
           }
         }
       }
 
-      // Now apply zone + skill updates  
-      if (Object.keys(updates).length > 0) {
-        await gameState.updateCharacter(updates);
+      // We need the character ID to update directly in DB
+      // Fetch it fresh since createCharacterWithClass may have created or updated it
+      const { data: chars } = await supabase
+        .from('characters')
+        .select('id')
+        .eq('user_id', userId)
+        .limit(1);
+
+      const charId = chars?.[0]?.id;
+      if (!charId) {
+        console.error('No character found after creation');
+        await gameState.refreshGameState();
+        setIsCreatingOrigin(false);
+        return;
       }
 
-      // Add bonus items
+      // Apply zone + skill updates directly to DB
+      if (Object.keys(updates).length > 0) {
+        await supabase.from('characters').update(updates).eq('id', charId);
+      }
+
+      // Add bonus items directly to DB
       if (data.bonusItems?.length) {
-        for (const item of data.bonusItems) {
-          await gameState.addInventoryItem({
-            name: item.name,
-            description: item.description || null,
-            icon: item.icon || '📦',
-            quantity: item.quantity || 1,
-            item_type: item.item_type || 'misc',
-          });
-        }
+        const itemsToInsert = data.bonusItems.map((item: any) => ({
+          character_id: charId,
+          name: item.name,
+          description: item.description || null,
+          icon: item.icon || '📦',
+          quantity: item.quantity || 1,
+          item_type: item.item_type || 'misc',
+        }));
+        await supabase.from('inventory_items').insert(itemsToInsert);
       }
 
       // Add intro narrative as first message
       if (data.introNarrative) {
-        await gameState.addMessage('assistant', data.introNarrative);
+        await supabase.from('chat_messages').insert({
+          character_id: charId,
+          role: 'assistant',
+          content: data.introNarrative,
+        });
       }
 
+      // NOW refresh to load everything at once
       await gameState.refreshGameState();
     } catch (err) {
       console.error('Origin generation error:', err);
+      await gameState.refreshGameState();
     } finally {
       setIsCreatingOrigin(false);
     }
-  }, [gameState, toast]);
+  }, [userId, gameState, toast]);
 
   const handleNewStory = async () => {
     await gameState.deleteCharacter();
