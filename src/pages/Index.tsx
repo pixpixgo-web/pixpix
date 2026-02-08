@@ -95,7 +95,10 @@ function AuthForm() {
 
 function GameInterface({ userId }: { userId: string }) {
   const gameState = useGameState(userId);
-  const { processAction, isProcessing, lastDiceRoll } = useGameMaster(gameState);
+  const { processAction, isProcessing, lastDiceRoll } = useGameMaster({
+    ...gameState,
+    refreshGameState: gameState.refreshGameState,
+  });
   const { toast } = useToast();
 
   const handleAction = async (action: string, isFreeAction: boolean) => {
