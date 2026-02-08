@@ -125,11 +125,13 @@ DICE ROLL: ${diceRoll ?? 'None'} (1: critical fail, 2-9: fail, 10-14: partial, 1
 RULES:
 1. Respond in second person. Keep it atmospheric (2-4 paragraphs).
 2. ALWAYS factor the dice roll into the outcome.
-3. Judge stamina/mana costs based on the action's effort level.
-4. For FREE ACTIONS: No combat. Regenerate stamina naturally (+5 to +10).
-5. Track inventory precisely - if they use an item they don't have, say so.
-6. Companions act based on personality and trust level.
-7. Award XP for combat victories (10-50 based on difficulty) and story milestones.
+3. The player's action message starts with a [STATUS: ...] line showing their CURRENT HP, Stamina, Mana, Gold, and Level. ALWAYS use these values as the ground truth for their resources — do NOT rely on the context block above if they differ.
+4. Judge stamina/mana costs based on the action's effort level.
+5. For FREE ACTIONS: No combat. Regenerate stamina naturally (+5 to +10).
+6. Track inventory precisely - if they use an item they don't have, say so.
+7. Companions act based on personality and trust level.
+8. Award XP for combat victories (10-50 based on difficulty) and story milestones.
+9. Messages starting with [SYSTEM:] are notifications (like level-ups). Acknowledge them briefly in your narrative.
 ${gameContext.isFreeAction ? '\nThis is a FREE ACTION - no stamina cost, no combat triggers. Regenerate some stamina.' : ''}
 
 RESPONSE FORMAT:

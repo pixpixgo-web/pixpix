@@ -116,8 +116,12 @@ export function useGameMaster({
         isFreeAction,
       };
 
+      // Prepend current resource values so the AI always knows them
+      const resourcePrefix = `[STATUS: HP ${character.hp}/${character.max_hp}, Stamina ${character.stamina}/${character.max_stamina}, Mana ${character.mana}/${character.max_mana}, Gold ${character.gold}, Level ${character.level}]`;
+      const enrichedAction = `${resourcePrefix}\n${action}`;
+
       const { data, error } = await supabase.functions.invoke('game-master', {
-        body: { action, gameContext, diceRoll },
+        body: { action: enrichedAction, gameContext, diceRoll },
       });
 
       if (error) throw new Error(error.message);
@@ -200,6 +204,9 @@ export function useGameMaster({
             currentStatPoints += 3;
 
             toast({ title: `🎉 Level Up! Level ${currentLevel}`, description: `HP +${hpGain}, Stamina +${staminaGain}, Mana +${manaGain}. +3 Stat Points! Resources fully restored!` });
+
+            // Send level-up notification to the AI so it acknowledges it
+            await addMessage('user', `[SYSTEM: ${character.name} has leveled up to Level ${currentLevel}! Max HP is now ${currentMaxHp}, Max Stamina ${currentMaxStamina}, Max Mana ${currentMaxMana}. All resources fully restored. +3 stat points granted.]`);
 
             xpNeeded = xpForNextLevel(currentLevel);
           }
