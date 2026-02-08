@@ -16,73 +16,166 @@ export type Database = {
     Tables: {
       characters: {
         Row: {
+          acrobatics: number
           action_points: number
+          aim: number
+          alteration: number
           backstory: string | null
+          bartering: number
+          beastmastery: number
+          betrayers_defeated: string[]
+          bloodmancy: number
+          bravery: number
+          brawling: number
           character_class: string | null
+          climbing: number
           created_at: string
           current_zone: string | null
           defense: number | null
+          destruction: number
           gold: number
+          honor: number
           hp: number
           id: string
+          illusion: number
+          infamy: number
+          intimidation: number
+          investigation: number
+          justice: number
           level: number
+          loyalty: number
           magic: number | null
+          malice: number
           mana: number
           max_action_points: number
           max_hp: number
           max_mana: number
           max_stamina: number
+          mercy: number
           name: string
+          necromancy: number
           offense: number | null
+          one_handed: number
+          persuasion: number
+          regeneration: number
+          seduction: number
+          sleight_of_hand: number
+          soulbinding: number
           stamina: number
+          stat_points: number
+          stealth: number
+          story_phase: string
+          two_handed: number
           updated_at: string
           user_id: string
           xp: number
         }
         Insert: {
+          acrobatics?: number
           action_points?: number
+          aim?: number
+          alteration?: number
           backstory?: string | null
+          bartering?: number
+          beastmastery?: number
+          betrayers_defeated?: string[]
+          bloodmancy?: number
+          bravery?: number
+          brawling?: number
           character_class?: string | null
+          climbing?: number
           created_at?: string
           current_zone?: string | null
           defense?: number | null
+          destruction?: number
           gold?: number
+          honor?: number
           hp?: number
           id?: string
+          illusion?: number
+          infamy?: number
+          intimidation?: number
+          investigation?: number
+          justice?: number
           level?: number
+          loyalty?: number
           magic?: number | null
+          malice?: number
           mana?: number
           max_action_points?: number
           max_hp?: number
           max_mana?: number
           max_stamina?: number
+          mercy?: number
           name?: string
+          necromancy?: number
           offense?: number | null
+          one_handed?: number
+          persuasion?: number
+          regeneration?: number
+          seduction?: number
+          sleight_of_hand?: number
+          soulbinding?: number
           stamina?: number
+          stat_points?: number
+          stealth?: number
+          story_phase?: string
+          two_handed?: number
           updated_at?: string
           user_id: string
           xp?: number
         }
         Update: {
+          acrobatics?: number
           action_points?: number
+          aim?: number
+          alteration?: number
           backstory?: string | null
+          bartering?: number
+          beastmastery?: number
+          betrayers_defeated?: string[]
+          bloodmancy?: number
+          bravery?: number
+          brawling?: number
           character_class?: string | null
+          climbing?: number
           created_at?: string
           current_zone?: string | null
           defense?: number | null
+          destruction?: number
           gold?: number
+          honor?: number
           hp?: number
           id?: string
+          illusion?: number
+          infamy?: number
+          intimidation?: number
+          investigation?: number
+          justice?: number
           level?: number
+          loyalty?: number
           magic?: number | null
+          malice?: number
           mana?: number
           max_action_points?: number
           max_hp?: number
           max_mana?: number
           max_stamina?: number
+          mercy?: number
           name?: string
+          necromancy?: number
           offense?: number | null
+          one_handed?: number
+          persuasion?: number
+          regeneration?: number
+          seduction?: number
+          sleight_of_hand?: number
+          soulbinding?: number
           stamina?: number
+          stat_points?: number
+          stealth?: number
+          story_phase?: string
+          two_handed?: number
           updated_at?: string
           user_id?: string
           xp?: number
@@ -125,42 +218,63 @@ export type Database = {
         Row: {
           character_id: string
           created_at: string
+          defense: number
           description: string | null
           hp: number
           icon: string
           id: string
           is_active: boolean
+          magic: number
+          mana: number
           max_hp: number
+          max_mana: number
+          max_stamina: number
           name: string
+          offense: number
           personality: string
+          stamina: number
           trust: number
           updated_at: string
         }
         Insert: {
           character_id: string
           created_at?: string
+          defense?: number
           description?: string | null
           hp?: number
           icon?: string
           id?: string
           is_active?: boolean
+          magic?: number
+          mana?: number
           max_hp?: number
+          max_mana?: number
+          max_stamina?: number
           name: string
+          offense?: number
           personality?: string
+          stamina?: number
           trust?: number
           updated_at?: string
         }
         Update: {
           character_id?: string
           created_at?: string
+          defense?: number
           description?: string | null
           hp?: number
           icon?: string
           id?: string
           is_active?: boolean
+          magic?: number
+          mana?: number
           max_hp?: number
+          max_mana?: number
+          max_stamina?: number
           name?: string
+          offense?: number
           personality?: string
+          stamina?: number
           trust?: number
           updated_at?: string
         }

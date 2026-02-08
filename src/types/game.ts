@@ -189,19 +189,42 @@ export interface Character {
   magic: number;
   current_zone: string;
   backstory: string | null;
+  // Detailed 1-100 skills
+  brawling: number;
+  one_handed: number;
+  two_handed: number;
+  acrobatics: number;
+  climbing: number;
+  stealth: number;
+  sleight_of_hand: number;
+  aim: number;
+  bloodmancy: number;
+  necromancy: number;
+  soulbinding: number;
+  destruction: number;
+  alteration: number;
+  illusion: number;
+  regeneration: number;
+  persuasion: number;
+  intimidation: number;
+  seduction: number;
+  investigation: number;
+  bartering: number;
+  beastmastery: number;
+  // Reputation
+  bravery: number;
+  mercy: number;
+  honor: number;
+  infamy: number;
+  justice: number;
+  loyalty: number;
+  malice: number;
+  // Progression
+  stat_points: number;
+  story_phase: string;
+  betrayers_defeated: string[];
   created_at: string;
   updated_at: string;
-}
-
-export interface InventoryItem {
-  id: string;
-  character_id: string;
-  name: string;
-  description: string | null;
-  icon: string;
-  quantity: number;
-  item_type: string;
-  created_at: string;
 }
 
 export interface Companion {
@@ -215,8 +238,77 @@ export interface Companion {
   trust: number;
   is_active: boolean;
   icon: string;
+  stamina: number;
+  max_stamina: number;
+  mana: number;
+  max_mana: number;
+  offense: number;
+  defense: number;
+  magic: number;
   created_at: string;
   updated_at: string;
+}
+
+// Skill definitions for UI
+export interface SkillDef {
+  key: keyof Character;
+  name: string;
+  category: 'physical' | 'magical' | 'social' | 'reputation';
+  description: string;
+}
+
+export const SKILLS: SkillDef[] = [
+  // Physical
+  { key: 'brawling', name: 'Brawling', category: 'physical', description: 'Unarmed combat damage' },
+  { key: 'one_handed', name: 'One Handed', category: 'physical', description: 'Sword & dagger proficiency' },
+  { key: 'two_handed', name: 'Two Handed', category: 'physical', description: 'Heavy weapon damage (more Stamina cost)' },
+  { key: 'acrobatics', name: 'Acrobatics', category: 'physical', description: 'Dodge, evade, and bypass obstacles' },
+  { key: 'climbing', name: 'Climbing', category: 'physical', description: 'Traverse vertical terrain and shortcuts' },
+  { key: 'stealth', name: 'Stealth', category: 'physical', description: 'Hide and move unseen' },
+  { key: 'sleight_of_hand', name: 'Sleight of Hand', category: 'physical', description: 'Pickpocket and disarm traps' },
+  { key: 'aim', name: 'Aim', category: 'physical', description: 'Ranged weapon accuracy' },
+  // Magical
+  { key: 'bloodmancy', name: 'Bloodmancy', category: 'magical', description: 'Spells that cost HP instead of Mana' },
+  { key: 'necromancy', name: 'Necromancy', category: 'magical', description: 'Raise undead, drain life' },
+  { key: 'soulbinding', name: 'Soulbinding', category: 'magical', description: 'Bind souls as companions or power' },
+  { key: 'destruction', name: 'Destruction', category: 'magical', description: 'Raw offensive magic damage' },
+  { key: 'alteration', name: 'Alteration', category: 'magical', description: 'Transform objects and environments' },
+  { key: 'illusion', name: 'Illusion', category: 'magical', description: 'Create decoys and confusion' },
+  { key: 'regeneration', name: 'Regeneration', category: 'magical', description: 'Healing magic and recovery' },
+  // Social
+  { key: 'persuasion', name: 'Persuasion', category: 'social', description: 'Convince NPCs through diplomacy' },
+  { key: 'intimidation', name: 'Intimidation', category: 'social', description: 'Threaten and coerce' },
+  { key: 'seduction', name: 'Seduction', category: 'social', description: 'Charm and manipulate' },
+  { key: 'investigation', name: 'Investigation', category: 'social', description: 'Find clues and hidden details' },
+  { key: 'bartering', name: 'Bartering', category: 'social', description: 'Get better prices and deals' },
+  { key: 'beastmastery', name: 'Beastmastery', category: 'social', description: 'Tame and command creatures' },
+  // Reputation
+  { key: 'bravery', name: 'Bravery', category: 'reputation', description: 'Ignore Mana Deficiency shaking for 2 turns' },
+  { key: 'mercy', name: 'Mercy', category: 'reputation', description: 'AI grants mercy saves on critical failures' },
+  { key: 'honor', name: 'Honor', category: 'reputation', description: 'NPCs trust and respect you' },
+  { key: 'infamy', name: 'Infamy', category: 'reputation', description: 'Shopkeepers fear you — lower prices' },
+  { key: 'justice', name: 'Justice', category: 'reputation', description: 'Increases defense multiplier' },
+  { key: 'loyalty', name: 'Loyalty', category: 'reputation', description: 'Companions gain trust faster' },
+  { key: 'malice', name: 'Malice', category: 'reputation', description: 'Hidden revenge power stat' },
+];
+
+// Betrayer list for revenge tracker
+export const BETRAYERS = [
+  { id: 'leader', name: 'Aldric the Betrayer', role: 'Party Leader', description: 'The one who stabbed you in the back.' },
+  { id: 'mage', name: 'Seraphina the Deceiver', role: 'Party Mage', description: 'Shielded the betrayal with illusion magic.' },
+  { id: 'healer', name: 'Brother Marcus', role: 'Party Healer', description: 'Refused to heal you as you fell.' },
+  { id: 'scout', name: 'Kira Shadowstep', role: 'Party Scout', description: 'Led you into the ambush.' },
+  { id: 'patron', name: 'Lord Ashworth', role: 'The Patron', description: 'Ordered the betrayal from the shadows.' },
+];
+export interface InventoryItem {
+  id: string;
+  character_id: string;
+  name: string;
+  description: string | null;
+  icon: string;
+  quantity: number;
+  item_type: string;
+  created_at: string;
 }
 
 export interface ChatMessage {

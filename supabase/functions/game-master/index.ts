@@ -23,6 +23,12 @@ interface GameContext {
     level: number;
     xp: number;
     backstory: string | null;
+    // Detailed skills
+    skills?: Record<string, number>;
+    // Reputation
+    reputation?: Record<string, number>;
+    storyPhase?: string;
+    betrayersDefeated?: string[];
   };
   inventory: Array<{ name: string; description: string | null; quantity: number }>;
   companions: Array<{ name: string; personality: string; hp: number; maxHp: number; trust: number }>;
@@ -64,7 +70,26 @@ serve(async (req) => {
     const staminaState = staminaPct >= 0.8 ? 'Fresh' : staminaPct > 0.2 ? 'Winded' : 'Exhausted';
     const manaState = c.mana <= 0 ? 'Deficient (Shaking)' : c.mana < c.maxMana * 0.2 ? 'Drained' : 'Normal';
 
+    // Build skills context
+    const skills = c.skills || {};
+    const nonZeroSkills = Object.entries(skills).filter(([_, v]) => v > 0);
+    const skillsContext = nonZeroSkills.length > 0
+      ? `\n\nActive Skills:\n${nonZeroSkills.map(([k, v]) => `- ${k}: ${v}/100`).join('\n')}`
+      : '';
+
+    const rep = c.reputation || {};
+    const nonZeroRep = Object.entries(rep).filter(([_, v]) => v !== 0);
+    const repContext = nonZeroRep.length > 0
+      ? `\n\nReputation:\n${nonZeroRep.map(([k, v]) => `- ${k}: ${v}`).join('\n')}`
+      : '';
+
+    const revengeContext = c.betrayersDefeated && c.betrayersDefeated.length > 0
+      ? `\n\nBetrayers Defeated: ${c.betrayersDefeated.join(', ')}`
+      : '';
+
     const systemPrompt = `You are an immersive Game Master for a dark fantasy RPG revenge story. The player was betrayed and left for dead. They seek vengeance.
+
+STORY PHASE: ${c.storyPhase || 'the_fall'}
 
 CURRENT STATE:
 - Character: ${c.name} (${c.characterClass}) Level ${c.level}
@@ -74,7 +99,7 @@ CURRENT STATE:
 - Mana: ${c.mana}/${c.maxMana} [${manaState}]
 - Gold: ${c.gold} | XP: ${c.xp}
 - Stats: Offense ${c.offense}/10, Defense ${c.defense}/10, Magic ${c.magic}/10
-${inventoryContext}${companionContext}${backstoryContext}
+${skillsContext}${repContext}${inventoryContext}${companionContext}${backstoryContext}${revengeContext}
 
 STAMINA SYSTEM (replaces AP):
 - Actions cost Stamina based on effort the AI (you) judges:
