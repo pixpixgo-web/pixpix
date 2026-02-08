@@ -20,8 +20,9 @@ serve(async (req) => {
       });
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    const GOOGLE_KEY = Deno.env.get("GOOGLE_GEMINI_API_KEY");
+    const LOVABLE_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!GOOGLE_KEY && !LOVABLE_KEY) throw new Error("No API key configured");
 
     const systemPrompt = `You are a game designer for a dark fantasy RPG. The player wants to create a custom character class.
 Given their description, generate a balanced class with stats.
@@ -45,14 +46,18 @@ RULES:
 
 Respond ONLY with a valid JSON object, no markdown, no explanation.`;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const useGoogle = !!GOOGLE_KEY;
+    const apiUrl = useGoogle
+      ? `https://generativelanguage.googleapis.com/v1beta/openai/chat/completions`
+      : "https://ai.gateway.lovable.dev/v1/chat/completions";
+    const response = await fetch(apiUrl, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${useGoogle ? GOOGLE_KEY : LOVABLE_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: useGoogle ? "gemini-2.5-flash" : "google/gemini-3-flash-preview",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: `Create a custom class based on this concept: "${description.trim().slice(0, 500)}"` },
