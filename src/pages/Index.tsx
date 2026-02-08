@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LogIn, LogOut, BookOpen, Users, Sword, Shield, Sparkles, Trash2, Target, Star } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -104,6 +104,7 @@ function GameInterface({ userId }: { userId: string }) {
   const { toast } = useToast();
   const [showLevelUp, setShowLevelUp] = useState(false);
   const [showStats, setShowStats] = useState(false);
+  const [isCreatingOrigin, setIsCreatingOrigin] = useState(false);
 
   // Auto-show level up modal when stat points are available
   useEffect(() => {
@@ -120,10 +121,80 @@ function GameInterface({ userId }: { userId: string }) {
     await processAction(action, isFreeAction);
   };
 
+  const handleClassSelection = useCallback(async (name: string, selectedClass: CharacterClass, backstory: string) => {
+    setIsCreatingOrigin(true);
+    try {
+      // First create the character
+      await gameState.createCharacterWithClass(name, selectedClass, backstory);
 
-  const handleClassSelection = async (name: string, selectedClass: CharacterClass, backstory: string) => {
-    await gameState.createCharacterWithClass(name, selectedClass, backstory);
-  };
+      // Then generate the origin story
+      const { data, error } = await supabase.functions.invoke('generate-origin', {
+        body: {
+          backstory,
+          characterName: name,
+          className: selectedClass.name,
+          classCategory: selectedClass.category,
+        },
+      });
+
+      if (error || data?.error) {
+        console.error('Origin generation failed:', error || data?.error);
+        // Fallback: keep tavern, no bonus items
+        setIsCreatingOrigin(false);
+        return;
+      }
+
+      // Apply origin results: zone, bonus items, skill boosts, intro narrative
+      const updates: Partial<Character> = {};
+
+      if (data.startingZone) {
+        updates.current_zone = data.startingZone;
+      }
+
+      // Apply skill boosts
+      if (data.skillBoosts && typeof data.skillBoosts === 'object') {
+        for (const [key, value] of Object.entries(data.skillBoosts)) {
+          if (typeof value === 'number') {
+            const currentVal = (gameState.character as any)?.[key] || 0;
+            (updates as any)[key] = currentVal + value;
+          }
+        }
+      }
+
+      // We need to wait for the character to be fully created first
+      // Refresh to get the new character
+      await gameState.refreshGameState();
+
+      // Now apply zone + skill updates  
+      if (Object.keys(updates).length > 0) {
+        await gameState.updateCharacter(updates);
+      }
+
+      // Add bonus items
+      if (data.bonusItems?.length) {
+        for (const item of data.bonusItems) {
+          await gameState.addInventoryItem({
+            name: item.name,
+            description: item.description || null,
+            icon: item.icon || '📦',
+            quantity: item.quantity || 1,
+            item_type: item.item_type || 'misc',
+          });
+        }
+      }
+
+      // Add intro narrative as first message
+      if (data.introNarrative) {
+        await gameState.addMessage('assistant', data.introNarrative);
+      }
+
+      await gameState.refreshGameState();
+    } catch (err) {
+      console.error('Origin generation error:', err);
+    } finally {
+      setIsCreatingOrigin(false);
+    }
+  }, [gameState, toast]);
 
   const handleNewStory = async () => {
     await gameState.deleteCharacter();
@@ -134,12 +205,22 @@ function GameInterface({ userId }: { userId: string }) {
     await supabase.auth.signOut();
   };
 
-  if (gameState.isLoading) {
+  if (gameState.isLoading || isCreatingOrigin) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4">
         <motion.div animate={{ rotate: 360 }} transition={{ duration: 2, repeat: Infinity, ease: "linear" }}>
           <Sword className="w-12 h-12 text-primary" />
         </motion.div>
+        {isCreatingOrigin && (
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: [0.5, 1, 0.5] }}
+            transition={{ repeat: Infinity, duration: 2 }}
+            className="text-muted-foreground font-medieval text-lg"
+          >
+            The fates weave your origin...
+          </motion.p>
+        )}
       </div>
     );
   }
