@@ -135,6 +135,20 @@ export function useGameState(userId: string | null) {
   const addInventoryItem = useCallback(async (item: Omit<InventoryItem, 'id' | 'character_id' | 'created_at'>) => {
     if (!gameState.character) return;
 
+    // Check if item already exists — merge by incrementing quantity
+    const existing = gameState.inventory.find(i => i.name.toLowerCase() === item.name.toLowerCase());
+    if (existing) {
+      const newQty = existing.quantity + (item.quantity || 1);
+      const { error } = await supabase.from('inventory_items').update({ quantity: newQty }).eq('id', existing.id);
+      if (!error) {
+        setGameState(prev => ({
+          ...prev,
+          inventory: prev.inventory.map(i => i.id === existing.id ? { ...i, quantity: newQty } : i),
+        }));
+      }
+      return;
+    }
+
     const { data, error } = await supabase
       .from('inventory_items')
       .insert({ ...item, character_id: gameState.character.id })
@@ -144,7 +158,7 @@ export function useGameState(userId: string | null) {
     if (!error && data) {
       setGameState(prev => ({ ...prev, inventory: [...prev.inventory, data as InventoryItem] }));
     }
-  }, [gameState.character]);
+  }, [gameState.character, gameState.inventory]);
 
   const removeInventoryItem = useCallback(async (itemName: string) => {
     if (!gameState.character) return;

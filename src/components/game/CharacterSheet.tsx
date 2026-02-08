@@ -174,7 +174,7 @@ export function CharacterSheet({ character, inventory }: CharacterSheetProps) {
           Inventory ({inventory.length})
         </h3>
         
-        <div className="grid grid-cols-5 gap-2">
+        <div className="grid grid-cols-5 gap-2 max-h-[120px] overflow-y-auto">
           {inventory.map((item) => (
             <Tooltip key={item.id}>
               <TooltipTrigger asChild>
