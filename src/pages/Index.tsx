@@ -144,6 +144,9 @@ function GameInterface({ userId }: { userId: string }) {
         return;
       }
 
+      // Wait for character to be fully created first
+      await gameState.refreshGameState();
+
       // Apply origin results: zone, bonus items, skill boosts, intro narrative
       const updates: Partial<Character> = {};
 
@@ -151,19 +154,14 @@ function GameInterface({ userId }: { userId: string }) {
         updates.current_zone = data.startingZone;
       }
 
-      // Apply skill boosts
+      // Apply skill boosts - read fresh character from refreshed state
       if (data.skillBoosts && typeof data.skillBoosts === 'object') {
         for (const [key, value] of Object.entries(data.skillBoosts)) {
           if (typeof value === 'number') {
-            const currentVal = (gameState.character as any)?.[key] || 0;
-            (updates as any)[key] = currentVal + value;
+            (updates as any)[key] = value; // Set directly since these are boosts on top of base 0
           }
         }
       }
-
-      // We need to wait for the character to be fully created first
-      // Refresh to get the new character
-      await gameState.refreshGameState();
 
       // Now apply zone + skill updates  
       if (Object.keys(updates).length > 0) {
