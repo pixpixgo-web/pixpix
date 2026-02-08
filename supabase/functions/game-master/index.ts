@@ -48,8 +48,9 @@ serve(async (req) => {
       diceRoll?: number;
     };
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    const GOOGLE_KEY = Deno.env.get("GOOGLE_GEMINI_API_KEY");
+    const LOVABLE_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!GOOGLE_KEY && !LOVABLE_KEY) throw new Error("No API key configured (set GOOGLE_GEMINI_API_KEY or LOVABLE_API_KEY)");
 
     const c = gameContext.character;
 
@@ -168,14 +169,18 @@ Only include JSON if changes occurred.`;
       { role: "user", content: action },
     ];
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const useGoogle = !!GOOGLE_KEY;
+    const apiUrl = useGoogle
+      ? `https://generativelanguage.googleapis.com/v1beta/openai/chat/completions`
+      : "https://ai.gateway.lovable.dev/v1/chat/completions";
+    const response = await fetch(apiUrl, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${useGoogle ? GOOGLE_KEY : LOVABLE_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: useGoogle ? "gemini-2.5-flash" : "google/gemini-3-flash-preview",
         messages,
         stream: false,
       }),
