@@ -192,25 +192,8 @@ export function useGameState(userId: string | null) {
         .eq('user_id', userId)
         .limit(1);
 
-      // Build starting skill values from class startingSkills
-      const skillMap: Record<string, string> = {
-        'Brawling': 'brawling', 'One Handed': 'one_handed', 'Two Handed': 'two_handed',
-        'Acrobatics': 'acrobatics', 'Climbing': 'climbing', 'Stealth': 'stealth',
-        'Sleight of Hand': 'sleight_of_hand', 'Aim': 'aim', 'Bloodmancy': 'bloodmancy',
-        'Necromancy': 'necromancy', 'Soulbinding': 'soulbinding', 'Destruction': 'destruction',
-        'Alteration': 'alteration', 'Illusion': 'illusion', 'Regeneration': 'regeneration',
-        'Persuasion': 'persuasion', 'Intimidation': 'intimidation', 'Seduction': 'seduction',
-        'Investigation': 'investigation', 'Bartering': 'bartering', 'Beastmastery': 'beastmastery',
-        'Bravery': 'bravery', 'Honor': 'honor', 'Justice': 'justice', 'Loyalty': 'loyalty',
-      };
-
-      const startingSkills: Record<string, number> = {};
-      if (selectedClass.startingSkills) {
-        for (const skill of selectedClass.startingSkills) {
-          const col = skillMap[skill];
-          if (col) startingSkills[col] = 10; // Starting bonus
-        }
-      }
+      // Use class defaultStats for starting skill values
+      const startingSkills: Record<string, number> = { ...(selectedClass.defaultStats || {}) };
 
       const charData = {
         name,
