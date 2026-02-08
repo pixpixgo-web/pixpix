@@ -218,7 +218,7 @@ export function useGameMaster({
           charUpdates.max_mana = currentMaxMana;
           charUpdates.hp = currentHp;
           charUpdates.stamina = currentStamina;
-          charUpdates.mana = currentMaxMana;
+          charUpdates.mana = currentMana;
           charUpdates.stat_points = currentStatPoints;
         }
 
