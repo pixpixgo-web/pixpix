@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LogIn, LogOut, BookOpen, Users, Sword, Shield, Sparkles, Trash2 } from 'lucide-react';
+import { LogIn, LogOut, BookOpen, Users, Sword, Shield, Sparkles, Trash2, Target, Star } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useGameState } from '@/hooks/useGameState';
 import { useGameMaster } from '@/hooks/useGameMaster';
@@ -13,6 +13,8 @@ import { ActionInput } from '@/components/game/ActionInput';
 import { LoreDrawer } from '@/components/game/LoreDrawer';
 import { RestButton } from '@/components/game/RestButton';
 import { ClassSelection } from '@/components/game/ClassSelection';
+import { LevelUpModal } from '@/components/game/LevelUpModal';
+import { RevengeTracker } from '@/components/game/RevengeTracker';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
@@ -30,7 +32,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { ZONES, CharacterClass } from '@/types/game';
+import { ZONES, CharacterClass, Character } from '@/types/game';
 
 function AuthForm() {
   const [isLogin, setIsLogin] = useState(true);
@@ -100,6 +102,18 @@ function GameInterface({ userId }: { userId: string }) {
     refreshGameState: gameState.refreshGameState,
   });
   const { toast } = useToast();
+  const [showLevelUp, setShowLevelUp] = useState(false);
+
+  // Auto-show level up modal when stat points are available
+  useEffect(() => {
+    if (gameState.character && gameState.character.stat_points > 0) {
+      setShowLevelUp(true);
+    }
+  }, [gameState.character?.stat_points]);
+
+  const handleStatAllocate = async (allocations: Partial<Character>) => {
+    await gameState.updateCharacter(allocations);
+  };
 
   const handleAction = async (action: string, isFreeAction: boolean) => {
     await processAction(action, isFreeAction);
@@ -247,23 +261,51 @@ function GameInterface({ userId }: { userId: string }) {
         </div>
 
         {/* Right Sidebar */}
-        <div className="lg:col-span-3">
+        <div className="lg:col-span-3 space-y-4">
           <Tabs defaultValue="party" className="h-full">
-            <TabsList className="grid w-full grid-cols-2 mb-4">
-              <TabsTrigger value="party" className="gap-2"><Users className="w-4 h-4" /> Party</TabsTrigger>
-              <TabsTrigger value="journal" className="gap-2"><BookOpen className="w-4 h-4" /> Journal</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-3 mb-4">
+              <TabsTrigger value="party" className="gap-1 text-xs"><Users className="w-3 h-3" /> Party</TabsTrigger>
+              <TabsTrigger value="revenge" className="gap-1 text-xs"><Target className="w-3 h-3" /> Revenge</TabsTrigger>
+              <TabsTrigger value="journal" className="gap-1 text-xs"><BookOpen className="w-3 h-3" /> Journal</TabsTrigger>
             </TabsList>
             <TabsContent value="party" className="mt-0">
               <PartyPanel companions={gameState.companions} />
+            </TabsContent>
+            <TabsContent value="revenge" className="mt-0">
+              <RevengeTracker
+                defeatedIds={gameState.character.betrayers_defeated || []}
+                storyPhase={gameState.character.story_phase || 'the_fall'}
+              />
             </TabsContent>
             <TabsContent value="journal" className="mt-0">
               <Journal entries={gameState.journal} />
             </TabsContent>
           </Tabs>
+
+          {/* Stat Points Button */}
+          {gameState.character.stat_points > 0 && (
+            <Button
+              onClick={() => setShowLevelUp(true)}
+              className="w-full gold-border bg-primary/10 hover:bg-primary/20 animate-pulse"
+            >
+              <Star className="w-4 h-4 mr-2" />
+              {gameState.character.stat_points} Stat Points Available
+            </Button>
+          )}
         </div>
       </div>
 
       <LoreDrawer character={gameState.character} inventory={gameState.inventory} companions={gameState.companions} />
+
+      {/* Level Up Modal */}
+      {gameState.character && (
+        <LevelUpModal
+          character={gameState.character}
+          open={showLevelUp}
+          onClose={() => setShowLevelUp(false)}
+          onAllocate={handleStatAllocate}
+        />
+      )}
     </div>
   );
 }

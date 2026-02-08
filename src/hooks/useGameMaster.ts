@@ -92,6 +92,21 @@ export function useGameMaster({
           level: character.level,
           xp: character.xp,
           backstory: character.backstory,
+          skills: {
+            brawling: character.brawling, one_handed: character.one_handed, two_handed: character.two_handed,
+            acrobatics: character.acrobatics, climbing: character.climbing, stealth: character.stealth,
+            sleight_of_hand: character.sleight_of_hand, aim: character.aim, bloodmancy: character.bloodmancy,
+            necromancy: character.necromancy, soulbinding: character.soulbinding, destruction: character.destruction,
+            alteration: character.alteration, illusion: character.illusion, regeneration: character.regeneration,
+            persuasion: character.persuasion, intimidation: character.intimidation, seduction: character.seduction,
+            investigation: character.investigation, bartering: character.bartering, beastmastery: character.beastmastery,
+          },
+          reputation: {
+            bravery: character.bravery, mercy: character.mercy, honor: character.honor,
+            infamy: character.infamy, justice: character.justice, loyalty: character.loyalty, malice: character.malice,
+          },
+          storyPhase: character.story_phase,
+          betrayersDefeated: character.betrayers_defeated,
         },
         inventory: inventory.map(i => ({ name: i.name, description: i.description, quantity: i.quantity })),
         companions: companions.filter(c => c.is_active).map(c => ({
@@ -115,6 +130,7 @@ export function useGameMaster({
       if (changes) {
         const charUpdates: Partial<Character> = {};
 
+        let currentStatPoints = character.stat_points || 0;
         // Track current values locally to avoid stale state
         let currentHp = character.hp;
         let currentStamina = character.stamina;
@@ -180,7 +196,10 @@ export function useGameMaster({
             currentStamina = currentMaxStamina;
             currentMana = currentMaxMana;
 
-            toast({ title: `🎉 Level Up! Level ${currentLevel}`, description: `HP +${hpGain}, Stamina +${staminaGain}, Mana +${manaGain}. Resources fully restored!` });
+            // Grant 3 stat points per level
+            currentStatPoints += 3;
+
+            toast({ title: `🎉 Level Up! Level ${currentLevel}`, description: `HP +${hpGain}, Stamina +${staminaGain}, Mana +${manaGain}. +3 Stat Points! Resources fully restored!` });
 
             xpNeeded = xpForNextLevel(currentLevel);
           }
@@ -193,6 +212,7 @@ export function useGameMaster({
           charUpdates.hp = currentHp;
           charUpdates.stamina = currentStamina;
           charUpdates.mana = currentMaxMana;
+          charUpdates.stat_points = currentStatPoints;
         }
 
         if (changes.zoneChange) {
@@ -240,6 +260,8 @@ export function useGameMaster({
               name: changes.newCompanion.name, description: changes.newCompanion.description,
               personality: changes.newCompanion.personality, hp: companionHp, max_hp: companionMaxHp,
               trust: 50, is_active: true, icon: changes.newCompanion.icon,
+              stamina: 100, max_stamina: 100, mana: 50, max_mana: 50,
+              offense: 5, defense: 5, magic: 3,
             });
             toast({ title: "New Companion!", description: `${changes.newCompanion.name} has joined your party!` });
           } else {
