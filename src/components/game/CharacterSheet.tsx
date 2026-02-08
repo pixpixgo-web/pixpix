@@ -61,7 +61,7 @@ export function CharacterSheet({ character, inventory }: CharacterSheetProps) {
       <div className="flex items-center justify-between">
         <h2 className="font-medieval text-lg text-primary gold-glow">{character.name}</h2>
         <Badge variant="outline" className="gold-border text-xs">
-          {charClass?.icon} {charClass?.name || character.character_class}
+          {charClass?.icon || '⚔️'} {charClass?.name || character.character_class}
         </Badge>
       </div>
 
