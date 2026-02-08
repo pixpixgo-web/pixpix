@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import { Heart, Coins, Flame, Droplets, Star, Package, Sword, Shield, Sparkles, MapPin } from 'lucide-react';
+import { StatusEffects } from './StatusEffects';
 import { Character, InventoryItem, ZONES, CHARACTER_CLASSES, xpForNextLevel } from '@/types/game';
 import {
   Tooltip,
@@ -107,7 +108,9 @@ export function CharacterSheet({ character, inventory }: CharacterSheetProps) {
         bgClass="bg-magic-blue/20"
       />
 
-      {/* XP Bar */}
+      {/* Status Effects */}
+      <StatusEffects character={character} />
+
       <div className="space-y-1">
         <div className="flex items-center justify-between text-xs">
           <span className="flex items-center gap-1 text-primary">
