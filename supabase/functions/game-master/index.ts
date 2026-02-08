@@ -127,9 +127,9 @@ Write your narrative, then include a JSON block for state changes:
 - staminaChange: negative for costs, positive for recovery (defend: +10, free actions: +5 to +10, rest: based on zone)
 - manaChange: negative for spell costs, positive for recovery
 - removeItems: array of item name strings to remove from inventory
-- zoneChange: new zone id if the player moved (tavern/village/forest/dungeon/caves/ruins/abyss)
+- zoneChange: MUST be one of these exact IDs when the player moves: tavern, village, forest, dungeon, caves, ruins, abyss. ALWAYS set this if the narrative implies the player has moved location.
 - journalEntry: {"title": "...", "content": "..."} for significant story beats
-- newCompanion: {"name": "...", "personality": "...", "icon": "emoji", "description": "..."}
+- newCompanion: {"name": "...", "personality": "...", "icon": "emoji", "description": "...", "hp": number, "max_hp": number} — hp should scale with character level (e.g., 80-150 for mercenaries). Do NOT add a companion that is already in the party.
 Only include JSON if changes occurred.`;
 
     const messages = [

@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Character, InventoryItem, Companion, ChatMessage } from '@/types/game';
+import { Character, InventoryItem, Companion, ChatMessage, xpForNextLevel, CHARACTER_CLASSES } from '@/types/game';
 
 interface GameChanges {
   hpChange?: number;
@@ -12,7 +12,7 @@ interface GameChanges {
   newItems?: Array<{ name: string; description?: string; icon?: string; quantity?: number; item_type?: string }>;
   removeItems?: string[];
   trustChanges?: Array<{ name: string; change: number }>;
-  newCompanion?: { name: string; personality: string; icon: string; description: string };
+  newCompanion?: { name: string; personality: string; icon: string; description: string; hp?: number; max_hp?: number };
   journalEntry?: { title: string; content: string };
   zoneChange?: string;
 }
@@ -29,6 +29,7 @@ interface UseGameMasterProps {
   addInventoryItem: (item: Omit<InventoryItem, 'id' | 'character_id' | 'created_at'>) => Promise<void>;
   removeInventoryItem: (name: string) => Promise<void>;
   addJournalEntry: (title: string, content: string) => Promise<void>;
+  refreshGameState: () => Promise<void>;
 }
 
 export function useGameMaster({
@@ -43,12 +44,12 @@ export function useGameMaster({
   addInventoryItem,
   removeInventoryItem,
   addJournalEntry,
+  refreshGameState,
 }: UseGameMasterProps) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [lastDiceRoll, setLastDiceRoll] = useState<number | null>(null);
   const { toast } = useToast();
 
-  // Auto dice roll — always roll before an action
   const rollDice = useCallback((): number => {
     const value = Math.floor(Math.random() * 20) + 1;
     setLastDiceRoll(value);
@@ -70,13 +71,9 @@ export function useGameMaster({
     setIsProcessing(true);
 
     try {
-      // Auto roll dice for every action
       const diceRoll = rollDice();
-
-      // Add user message
       await addMessage('user', action);
 
-      // Build game context
       const gameContext = {
         character: {
           name: character.name,
@@ -111,16 +108,27 @@ export function useGameMaster({
       if (error) throw new Error(error.message);
       if (data.error) throw new Error(data.error);
 
-      // Add AI response
       await addMessage('assistant', data.narrative);
 
-      // Process game state changes
+      // Process game state changes — accumulate all updates into one object
       const changes = data.gameChanges as GameChanges | null;
       if (changes) {
         const charUpdates: Partial<Character> = {};
 
+        // Track current values locally to avoid stale state
+        let currentHp = character.hp;
+        let currentStamina = character.stamina;
+        let currentMana = character.mana;
+        let currentGold = character.gold;
+        let currentXp = character.xp;
+        let currentLevel = character.level;
+        let currentMaxHp = character.max_hp;
+        let currentMaxStamina = character.max_stamina;
+        let currentMaxMana = character.max_mana;
+
         if (changes.hpChange) {
-          charUpdates.hp = Math.max(0, Math.min(character.max_hp, character.hp + changes.hpChange));
+          currentHp = Math.max(0, Math.min(currentMaxHp, currentHp + changes.hpChange));
+          charUpdates.hp = currentHp;
           if (changes.hpChange < 0) {
             toast({ title: "Damage Taken!", description: `You lost ${Math.abs(changes.hpChange)} HP`, variant: "destructive" });
           } else {
@@ -129,29 +137,69 @@ export function useGameMaster({
         }
 
         if (changes.staminaChange) {
-          charUpdates.stamina = Math.max(0, Math.min(character.max_stamina, character.stamina + changes.staminaChange));
+          currentStamina = Math.max(0, Math.min(currentMaxStamina, currentStamina + changes.staminaChange));
+          charUpdates.stamina = currentStamina;
         }
 
         if (changes.manaChange) {
-          charUpdates.mana = Math.max(0, Math.min(character.max_mana, character.mana + changes.manaChange));
+          currentMana = Math.max(0, Math.min(currentMaxMana, currentMana + changes.manaChange));
+          charUpdates.mana = currentMana;
         }
 
         if (changes.goldChange) {
-          charUpdates.gold = Math.max(0, character.gold + changes.goldChange);
+          currentGold = Math.max(0, currentGold + changes.goldChange);
+          charUpdates.gold = currentGold;
           if (changes.goldChange > 0) {
             toast({ title: "Gold Acquired!", description: `+${changes.goldChange} gold` });
           }
         }
 
         if (changes.xpGain && changes.xpGain > 0) {
-          charUpdates.xp = character.xp + changes.xpGain;
+          currentXp = currentXp + changes.xpGain;
           toast({ title: "XP Gained!", description: `+${changes.xpGain} XP` });
+
+          // Check for level up(s)
+          let xpNeeded = xpForNextLevel(currentLevel);
+          while (currentXp >= xpNeeded) {
+            currentXp -= xpNeeded;
+            currentLevel += 1;
+
+            // Get class data for scaling
+            const charClass = CHARACTER_CLASSES.find(c => c.id === character.character_class);
+            // Increase max resources on level up
+            const staminaGain = charClass ? Math.round(charClass.maxStamina * 0.05) : 5;
+            const manaGain = charClass ? Math.round(charClass.maxMana * 0.05) : 5;
+            const hpGain = 10;
+
+            currentMaxHp += hpGain;
+            currentMaxStamina += staminaGain;
+            currentMaxMana += manaGain;
+
+            // Refill all resources on level up (Second Wind)
+            currentHp = currentMaxHp;
+            currentStamina = currentMaxStamina;
+            currentMana = currentMaxMana;
+
+            toast({ title: `🎉 Level Up! Level ${currentLevel}`, description: `HP +${hpGain}, Stamina +${staminaGain}, Mana +${manaGain}. Resources fully restored!` });
+
+            xpNeeded = xpForNextLevel(currentLevel);
+          }
+
+          charUpdates.xp = currentXp;
+          charUpdates.level = currentLevel;
+          charUpdates.max_hp = currentMaxHp;
+          charUpdates.max_stamina = currentMaxStamina;
+          charUpdates.max_mana = currentMaxMana;
+          charUpdates.hp = currentHp;
+          charUpdates.stamina = currentStamina;
+          charUpdates.mana = currentMaxMana;
         }
 
         if (changes.zoneChange) {
           charUpdates.current_zone = changes.zoneChange;
         }
 
+        // Apply ALL character updates at once to avoid stale state
         if (Object.keys(charUpdates).length > 0) {
           await updateCharacter(charUpdates);
         }
@@ -183,18 +231,29 @@ export function useGameMaster({
         }
 
         if (changes.newCompanion) {
-          await addCompanion({
-            name: changes.newCompanion.name, description: changes.newCompanion.description,
-            personality: changes.newCompanion.personality, hp: 50, max_hp: 50,
-            trust: 50, is_active: true, icon: changes.newCompanion.icon,
-          });
-          toast({ title: "New Companion!", description: `${changes.newCompanion.name} has joined your party!` });
+          // Prevent duplicate companions by name
+          const existing = companions.find(c => c.name.toLowerCase() === changes.newCompanion!.name.toLowerCase());
+          if (!existing) {
+            const companionHp = changes.newCompanion.hp || Math.max(80, 50 + character.level * 10);
+            const companionMaxHp = changes.newCompanion.max_hp || companionHp;
+            await addCompanion({
+              name: changes.newCompanion.name, description: changes.newCompanion.description,
+              personality: changes.newCompanion.personality, hp: companionHp, max_hp: companionMaxHp,
+              trust: 50, is_active: true, icon: changes.newCompanion.icon,
+            });
+            toast({ title: "New Companion!", description: `${changes.newCompanion.name} has joined your party!` });
+          } else {
+            toast({ title: "Companion Reunited", description: `${changes.newCompanion.name} is already in your party.` });
+          }
         }
 
         if (changes.journalEntry) {
           await addJournalEntry(changes.journalEntry.title, changes.journalEntry.content);
         }
       }
+
+      // Refresh full state from DB to ensure everything is in sync
+      await refreshGameState();
     } catch (error) {
       console.error('Game Master error:', error);
       toast({
@@ -208,7 +267,7 @@ export function useGameMaster({
   }, [
     character, isProcessing, inventory, companions, messages,
     updateCharacter, addMessage, addCompanion, updateCompanion,
-    addInventoryItem, removeInventoryItem, addJournalEntry, toast, rollDice,
+    addInventoryItem, removeInventoryItem, addJournalEntry, toast, rollDice, refreshGameState,
   ]);
 
   return {
