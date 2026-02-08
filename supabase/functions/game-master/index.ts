@@ -120,7 +120,7 @@ MANA & SPELL SYSTEM:
   * The exact stage depends on class (High Magic classes are more resilient)
 - Bloodmancy spells can cost HP instead of Mana
 
-DICE ROLL: ${diceRoll ?? 'None'} (1: critical fail, 2-9: fail, 10-14: partial, 15-19: success, 20: critical success)
+DICE ROLL: ${diceRoll ?? 'None'} (1-3: critical fail, 4-6: fail, 7-9: barely scrape by, 10-15: acceptable outcome, 16-17: success, 18-19: great success, 20: best possible outcome). The dice should subtly influence the narrative — don't announce the roll or make it the focus. Just let the result naturally shape how well the action goes.
 
 RULES:
 1. Respond in second person. Keep it atmospheric (2-4 paragraphs).
