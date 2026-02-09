@@ -21,6 +21,12 @@ function getProviders(preferredProvider?: AIProvider): ProviderConfig[] {
   const OPENROUTER_KEY = Deno.env.get("OPENROUTER_API_KEY");
 
   const allProviders: (ProviderConfig | null)[] = [
+    OPENROUTER_KEY ? {
+      key: OPENROUTER_KEY,
+      url: "https://openrouter.ai/api/v1/chat/completions",
+      model: "tngtech/deepseek-r1t2-chimera:free",
+      name: 'openrouter' as AIProvider,
+    } : null,
     LOVABLE_KEY ? {
       key: LOVABLE_KEY,
       url: "https://ai.gateway.lovable.dev/v1/chat/completions",
@@ -32,12 +38,6 @@ function getProviders(preferredProvider?: AIProvider): ProviderConfig[] {
       url: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
       model: "gemini-2.5-flash",
       name: 'gemini' as AIProvider,
-    } : null,
-    OPENROUTER_KEY ? {
-      key: OPENROUTER_KEY,
-      url: "https://openrouter.ai/api/v1/chat/completions",
-      model: "tngtech/deepseek-r1t2-chimera:free",
-      name: 'openrouter' as AIProvider,
     } : null,
   ];
 
@@ -114,8 +114,8 @@ export async function callAI(
 // Check which providers have keys configured
 export function getAvailableProviders(): AIProvider[] {
   const providers: AIProvider[] = [];
+  if (Deno.env.get("OPENROUTER_API_KEY")) providers.push('openrouter');
   if (Deno.env.get("LOVABLE_API_KEY")) providers.push('lovable');
   if (Deno.env.get("GOOGLE_GEMINI_API_KEY")) providers.push('gemini');
-  if (Deno.env.get("OPENROUTER_API_KEY")) providers.push('openrouter');
   return providers;
 }
