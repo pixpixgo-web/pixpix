@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Character, InventoryItem, Companion, ChatMessage, xpForNextLevel, CHARACTER_CLASSES } from '@/types/game';
+import type { AIProvider } from '@/hooks/useAIProvider';
 
 interface GameChanges {
   hpChange?: number;
@@ -30,6 +31,8 @@ interface UseGameMasterProps {
   removeInventoryItem: (name: string) => Promise<void>;
   addJournalEntry: (title: string, content: string) => Promise<void>;
   refreshGameState: () => Promise<void>;
+  preferredProvider?: AIProvider | null;
+  onProviderUsed?: (provider: AIProvider) => void;
 }
 
 export function useGameMaster({
@@ -45,6 +48,8 @@ export function useGameMaster({
   removeInventoryItem,
   addJournalEntry,
   refreshGameState,
+  preferredProvider,
+  onProviderUsed,
 }: UseGameMasterProps) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [lastDiceRoll, setLastDiceRoll] = useState<number | null>(null);
@@ -121,11 +126,14 @@ export function useGameMaster({
       const enrichedAction = `${resourcePrefix}\n${action}`;
 
       const { data, error } = await supabase.functions.invoke('game-master', {
-        body: { action: enrichedAction, gameContext, diceRoll },
+        body: { action: enrichedAction, gameContext, diceRoll, preferredProvider: preferredProvider || undefined },
       });
 
       if (error) throw new Error(error.message);
       if (data.error) throw new Error(data.error);
+      if (data.provider && onProviderUsed) {
+        onProviderUsed(data.provider);
+      }
 
       await addMessage('assistant', data.narrative);
 

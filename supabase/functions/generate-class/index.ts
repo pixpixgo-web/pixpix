@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { callAI, type AIProvider } from "../_shared/ai-provider.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -11,18 +12,13 @@ serve(async (req) => {
   }
 
   try {
-    const { description } = await req.json() as { description: string };
+    const { description, preferredProvider } = await req.json() as { description: string; preferredProvider?: AIProvider };
 
     if (!description || description.trim().length < 5) {
       return new Response(JSON.stringify({ error: "Description too short" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-
-    const GOOGLE_KEY = Deno.env.get("GOOGLE_GEMINI_API_KEY");
-    const LOVABLE_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!GOOGLE_KEY && !LOVABLE_KEY) throw new Error("No API key configured");
 
     const systemPrompt = `You are a game designer for a dark fantasy RPG. The player wants to create a custom character class.
 Given their description, generate a balanced class with stats.
@@ -46,44 +42,16 @@ RULES:
 
 Respond ONLY with a valid JSON object, no markdown, no explanation.`;
 
-    const useGoogle = !!GOOGLE_KEY;
-    const apiUrl = useGoogle
-      ? `https://generativelanguage.googleapis.com/v1beta/openai/chat/completions`
-      : "https://ai.gateway.lovable.dev/v1/chat/completions";
-    const response = await fetch(apiUrl, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${useGoogle ? GOOGLE_KEY : LOVABLE_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: useGoogle ? "gemini-2.5-flash" : "google/gemini-3-flash-preview",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: `Create a custom class based on this concept: "${description.trim().slice(0, 500)}"` },
-        ],
-        stream: false,
-      }),
-    });
-
-    if (!response.ok) {
-      if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit exceeded. Please wait a moment." }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "AI credits depleted." }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      throw new Error("AI gateway error");
-    }
+    const { response, provider } = await callAI(
+      [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: `Create a custom class based on this concept: "${description.trim().slice(0, 500)}"` },
+      ],
+      { preferredProvider }
+    );
 
     const data = await response.json();
     let content = data.choices?.[0]?.message?.content || "";
-
-    // Strip markdown fences if present
     content = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
 
     let classData;
@@ -96,7 +64,6 @@ Respond ONLY with a valid JSON object, no markdown, no explanation.`;
       });
     }
 
-    // Validate and clamp values
     const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, Math.round(v || 0)));
     
     const result = {
@@ -116,9 +83,9 @@ Respond ONLY with a valid JSON object, no markdown, no explanation.`;
       maxHp: clamp(classData.maxHp ?? 100, 80, 150),
       passive: classData.passive ? String(classData.passive).slice(0, 120) : undefined,
       defaultStats: {} as Record<string, number>,
+      provider,
     };
 
-    // Validate defaultStats keys
     const validKeys = new Set([
       'brawling','one_handed','two_handed','acrobatics','climbing','stealth','sleight_of_hand','aim',
       'bloodmancy','necromancy','soulbinding','destruction','alteration','illusion','regeneration',
