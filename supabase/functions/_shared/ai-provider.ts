@@ -1,7 +1,7 @@
-// Shared AI provider fallback logic: Lovable → Gemini → OpenRouter
+// Shared AI provider fallback logic: Groq → OpenRouter → Lovable → Gemini
 // Returns the response and which provider was used
 
-export type AIProvider = 'lovable' | 'gemini' | 'openrouter';
+export type AIProvider = 'groq' | 'lovable' | 'gemini' | 'openrouter';
 
 interface ProviderConfig {
   key: string;
@@ -16,11 +16,18 @@ export interface AIResponse {
 }
 
 function getProviders(preferredProvider?: AIProvider): ProviderConfig[] {
+  const GROQ_KEY = Deno.env.get("GROQ_API_KEY");
   const LOVABLE_KEY = Deno.env.get("LOVABLE_API_KEY");
   const GOOGLE_KEY = Deno.env.get("GOOGLE_GEMINI_API_KEY");
   const OPENROUTER_KEY = Deno.env.get("OPENROUTER_API_KEY");
 
   const allProviders: (ProviderConfig | null)[] = [
+    GROQ_KEY ? {
+      key: GROQ_KEY,
+      url: "https://api.groq.com/openai/v1/chat/completions",
+      model: "llama-3.3-70b-versatile",
+      name: 'groq' as AIProvider,
+    } : null,
     OPENROUTER_KEY ? {
       key: OPENROUTER_KEY,
       url: "https://openrouter.ai/api/v1/chat/completions",
@@ -61,7 +68,7 @@ export async function callAI(
 ): Promise<AIResponse> {
   const providers = getProviders(options?.preferredProvider);
   if (providers.length === 0) {
-    throw new Error("No API keys configured (need LOVABLE_API_KEY, GOOGLE_GEMINI_API_KEY, or OPENROUTER_API_KEY)");
+    throw new Error("No API keys configured (need GROQ_API_KEY, OPENROUTER_API_KEY, LOVABLE_API_KEY, or GOOGLE_GEMINI_API_KEY)");
   }
 
   let lastError: Error | null = null;
@@ -114,6 +121,7 @@ export async function callAI(
 // Check which providers have keys configured
 export function getAvailableProviders(): AIProvider[] {
   const providers: AIProvider[] = [];
+  if (Deno.env.get("GROQ_API_KEY")) providers.push('groq');
   if (Deno.env.get("OPENROUTER_API_KEY")) providers.push('openrouter');
   if (Deno.env.get("LOVABLE_API_KEY")) providers.push('lovable');
   if (Deno.env.get("GOOGLE_GEMINI_API_KEY")) providers.push('gemini');
