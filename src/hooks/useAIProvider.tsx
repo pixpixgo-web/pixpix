@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, createContext, useContext } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
-export type AIProvider = 'lovable' | 'gemini' | 'openrouter';
+export type AIProvider = 'groq' | 'lovable' | 'gemini' | 'openrouter';
 
 interface AIProviderState {
   availableProviders: AIProvider[];
