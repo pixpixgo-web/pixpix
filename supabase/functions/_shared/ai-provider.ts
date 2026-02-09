@@ -36,7 +36,7 @@ function getProviders(preferredProvider?: AIProvider): ProviderConfig[] {
     OPENROUTER_KEY ? {
       key: OPENROUTER_KEY,
       url: "https://openrouter.ai/api/v1/chat/completions",
-      model: "google/gemini-2.5-flash",
+      model: "tngtech/deepseek-r1t2-chimera:free",
       name: 'openrouter' as AIProvider,
     } : null,
   ];
