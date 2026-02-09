@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LogIn, LogOut, BookOpen, Users, Sword, Shield, Sparkles, Trash2, Target, Star } from 'lucide-react';
+import { AIProviderProvider, useAIProvider } from '@/hooks/useAIProvider';
+import { AIStatusButton } from '@/components/game/AIStatusButton';
 import { supabase } from '@/integrations/supabase/client';
 import { useGameState } from '@/hooks/useGameState';
 import { useGameMaster } from '@/hooks/useGameMaster';
@@ -97,9 +99,12 @@ function AuthForm() {
 
 function GameInterface({ userId }: { userId: string }) {
   const gameState = useGameState(userId);
+  const { preferredProvider, setActiveProvider } = useAIProvider();
   const { processAction, isProcessing, lastDiceRoll } = useGameMaster({
     ...gameState,
     refreshGameState: gameState.refreshGameState,
+    preferredProvider,
+    onProviderUsed: setActiveProvider,
   });
   const { toast } = useToast();
   const [showLevelUp, setShowLevelUp] = useState(false);
@@ -386,6 +391,7 @@ function GameInterface({ userId }: { userId: string }) {
       </div>
 
       <LoreDrawer character={gameState.character} inventory={gameState.inventory} companions={gameState.companions} />
+      <AIStatusButton />
 
       {/* Level Up Modal */}
       {gameState.character && (
@@ -434,16 +440,18 @@ export default function Index() {
   }
 
   return (
-    <AnimatePresence mode="wait">
-      {userId ? (
-        <motion.div key="game" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-          <GameInterface userId={userId} />
-        </motion.div>
-      ) : (
-        <motion.div key="auth" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="min-h-screen flex items-center justify-center bg-background p-4">
-          <AuthForm />
-        </motion.div>
-      )}
-    </AnimatePresence>
+    <AIProviderProvider>
+      <AnimatePresence mode="wait">
+        {userId ? (
+          <motion.div key="game" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <GameInterface userId={userId} />
+          </motion.div>
+        ) : (
+          <motion.div key="auth" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="min-h-screen flex items-center justify-center bg-background p-4">
+            <AuthForm />
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </AIProviderProvider>
   );
 }

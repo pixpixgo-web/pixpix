@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { callAI, type AIProvider } from "../_shared/ai-provider.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -27,16 +28,12 @@ serve(async (req) => {
   }
 
   try {
-    const { question, gameContext } = await req.json() as {
+    const { question, gameContext, preferredProvider } = await req.json() as {
       question: string;
       gameContext: GameContext;
+      preferredProvider?: AIProvider;
     };
 
-    const GOOGLE_KEY = Deno.env.get("GOOGLE_GEMINI_API_KEY");
-    const LOVABLE_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!GOOGLE_KEY && !LOVABLE_KEY) throw new Error("No API key configured");
-
-    // Build context for lore queries
     const inventoryList = gameContext.inventory.length > 0
       ? gameContext.inventory.map(i => `- ${i.name} x${i.quantity}${i.description ? `: ${i.description}` : ''}`).join('\n')
       : 'Empty inventory';
@@ -73,49 +70,19 @@ RULES:
 5. Reference the player's actual inventory and stats when relevant
 6. Be in-character as a mystical advisor or ancient tome`;
 
-    const useGoogle = !!GOOGLE_KEY;
-    const apiUrl = useGoogle
-      ? `https://generativelanguage.googleapis.com/v1beta/openai/chat/completions`
-      : "https://ai.gateway.lovable.dev/v1/chat/completions";
-    const response = await fetch(apiUrl, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${useGoogle ? GOOGLE_KEY : LOVABLE_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: useGoogle ? "gemini-2.5-flash" : "google/gemini-3-flash-preview",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: question }
-        ],
-        stream: false,
-      }),
-    });
-
-    if (!response.ok) {
-      if (response.status === 429) {
-        return new Response(
-          JSON.stringify({ error: "Rate limit exceeded. Please wait a moment." }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      if (response.status === 402) {
-        return new Response(
-          JSON.stringify({ error: "AI credits depleted." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      const errorText = await response.text();
-      console.error("AI gateway error:", response.status, errorText);
-      throw new Error("AI gateway error");
-    }
+    const { response, provider } = await callAI(
+      [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: question }
+      ],
+      { preferredProvider }
+    );
 
     const data = await response.json();
     const answer = data.choices?.[0]?.message?.content || "The ancient tome remains silent...";
 
     return new Response(
-      JSON.stringify({ answer }),
+      JSON.stringify({ answer, provider }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (e) {
