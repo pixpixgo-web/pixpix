@@ -209,7 +209,7 @@ export function useGameMaster({
             currentMana = currentMaxMana;
 
             // Grant 3 stat points per level
-            currentStatPoints += 10;
+            currentStatPoints += 3;
 
             toast({ title: `🎉 Level Up! Level ${currentLevel}`, description: `HP +${hpGain}, Stamina +${staminaGain}, Mana +${manaGain}. +3 Stat Points! Resources fully restored!` });
 
