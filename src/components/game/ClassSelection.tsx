@@ -12,7 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { CHARACTER_CLASSES, CharacterClass } from '@/types/game';
 
 interface ClassSelectionProps {
-  onComplete: (name: string, characterClass: CharacterClass, backstory: string) => void;
+  onComplete: (name: string, characterClass: CharacterClass, backstory: string, description: string) => void;
 }
 
 const TIER_LABELS: Record<string, { label: string; color: string }> = {
@@ -23,8 +23,9 @@ const TIER_LABELS: Record<string, { label: string; color: string }> = {
 };
 
 export function ClassSelection({ onComplete }: ClassSelectionProps) {
-  const [step, setStep] = useState<'name' | 'backstory' | 'class'>('name');
+  const [step, setStep] = useState<'name' | 'description' | 'backstory' | 'class'>('name');
   const [characterName, setCharacterName] = useState('');
+  const [characterDescription, setCharacterDescription] = useState('');
   const [backstory, setBackstory] = useState('');
   const [selectedClass, setSelectedClass] = useState<CharacterClass | null>(null);
   const [tierFilter, setTierFilter] = useState<string | null>(null);
@@ -36,7 +37,12 @@ export function ClassSelection({ onComplete }: ClassSelectionProps) {
 
   const handleNameSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (characterName.trim()) setStep('backstory');
+    if (characterName.trim()) setStep('description');
+  };
+
+  const handleDescriptionSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (characterDescription.trim()) setStep('backstory');
   };
 
   const handleBackstorySubmit = (e: React.FormEvent) => {
@@ -46,7 +52,7 @@ export function ClassSelection({ onComplete }: ClassSelectionProps) {
 
   const handleConfirm = () => {
     if (selectedClass && characterName.trim()) {
-      onComplete(characterName.trim(), selectedClass, backstory.trim());
+      onComplete(characterName.trim(), selectedClass, backstory.trim(), characterDescription.trim());
     }
   };
 
@@ -133,9 +139,9 @@ export function ClassSelection({ onComplete }: ClassSelectionProps) {
       </div>
 
       <div className="space-y-2 mb-4">
-        <StatBar label="Offense" value={cls.offense} max={10} icon={<Sword className="w-4 h-4 text-destructive" />} />
-        <StatBar label="Defense" value={cls.defense} max={10} icon={<Shield className="w-4 h-4 text-blue-400" />} />
-        <StatBar label="Magic" value={cls.magic} max={10} icon={<Sparkles className="w-4 h-4 text-purple-400" />} />
+        <StatBar label="Offense" value={cls.offense} max={100} icon={<Sword className="w-4 h-4 text-destructive" />} />
+        <StatBar label="Defense" value={cls.defense} max={100} icon={<Shield className="w-4 h-4 text-blue-400" />} />
+        <StatBar label="Magic" value={cls.magic} max={100} icon={<Sparkles className="w-4 h-4 text-purple-400" />} />
         <StatBar label="Stamina" value={cls.maxStamina} max={200} icon={<Flame className="w-4 h-4 text-gold-coin" />} />
         <StatBar label="Mana" value={cls.maxMana} max={200} icon={<Droplets className="w-4 h-4 text-magic-blue" />} />
       </div>
@@ -188,6 +194,34 @@ export function ClassSelection({ onComplete }: ClassSelectionProps) {
                 </Button>
               </form>
             </motion.div>
+          ) : step === 'description' ? (
+            <motion.div key="description" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+              <div className="text-center mb-6">
+                <h1 className="font-medieval text-2xl text-primary gold-glow mb-2">Your Appearance</h1>
+                <p className="text-muted-foreground text-sm">
+                  Describe what <span className="text-primary">{characterName}</span> looks like.
+                </p>
+              </div>
+              <form onSubmit={handleDescriptionSubmit} className="space-y-4 max-w-md mx-auto">
+                <Textarea
+                  value={characterDescription}
+                  onChange={(e) => setCharacterDescription(e.target.value)}
+                  placeholder="Tall with silver hair and piercing blue eyes... Scarred face with a mysterious tattoo... Short and nimble with wild red hair..."
+                  className="bg-secondary/30 min-h-[120px]"
+                  maxLength={300}
+                  autoFocus
+                />
+                <p className="text-xs text-muted-foreground text-center">
+                  This description will be used to generate your character portrait.
+                </p>
+                <div className="flex gap-2">
+                  <Button variant="ghost" type="button" onClick={() => setStep('name')} className="flex-1">← Back</Button>
+                  <Button type="submit" className="flex-1 gold-border" disabled={!characterDescription.trim()}>
+                    Next <ChevronRight className="w-4 h-4 ml-2" />
+                  </Button>
+                </div>
+              </form>
+            </motion.div>
           ) : step === 'backstory' ? (
             <motion.div key="backstory" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
               <div className="text-center mb-6">
@@ -208,7 +242,7 @@ export function ClassSelection({ onComplete }: ClassSelectionProps) {
                   Your backstory determines starting items and spells — a knight's child gets good gear but few spells, a mage's child gets magical knowledge, etc.
                 </p>
                 <div className="flex gap-2">
-                  <Button variant="ghost" onClick={() => setStep('name')} className="flex-1">← Back</Button>
+                  <Button variant="ghost" onClick={() => setStep('description')} className="flex-1">← Back</Button>
                   <Button type="submit" className="flex-1 gold-border">
                     Choose Class <ChevronRight className="w-4 h-4 ml-2" />
                   </Button>

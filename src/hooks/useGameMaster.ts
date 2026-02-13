@@ -289,6 +289,46 @@ export function useGameMaster({
         }
       }
 
+      // PASSIVE SKILL LEVELING - Detect skills used in action
+      const { detectSkillUsage, calculateSkillXP } = await import('@/lib/skillLeveling');
+      const usedSkills = detectSkillUsage(action);
+      
+      if (usedSkills.length > 0) {
+        const skillUpdates: Partial<Character> = {};
+        const levelUpMessages: string[] = [];
+        
+        for (const skillName of usedSkills) {
+          const currentSkillValue = (character as any)[skillName] || 0;
+          const xpGain = calculateSkillXP();
+          
+          // Skills cap at 100
+          if (currentSkillValue < 100) {
+            const newValue = Math.min(100, currentSkillValue + xpGain);
+            skillUpdates[skillName as keyof Character] = newValue as any;
+            
+            // Check if skill leveled up (every 10 points is a "level")
+            const oldLevel = Math.floor(currentSkillValue / 10);
+            const newLevel = Math.floor(newValue / 10);
+            
+            if (newLevel > oldLevel) {
+              levelUpMessages.push(`${skillName.replace('_', ' ')} reached level ${newLevel}!`);
+            }
+          }
+        }
+        
+        if (Object.keys(skillUpdates).length > 0) {
+          await updateCharacter(skillUpdates);
+          
+          if (levelUpMessages.length > 0) {
+            toast({
+              title: "🌟 Skill Improved!",
+              description: levelUpMessages.join(' | '),
+              duration: 4000,
+            });
+          }
+        }
+      }
+
       // Refresh full state from DB to ensure everything is in sync
       await refreshGameState();
     } catch (error) {

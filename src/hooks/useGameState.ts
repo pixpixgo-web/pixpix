@@ -196,7 +196,7 @@ export function useGameState(userId: string | null) {
     }
   }, [gameState.character, gameState.journal.length]);
 
-  const createCharacterWithClass = useCallback(async (name: string, selectedClass: CharacterClass, backstory: string) => {
+  const createCharacterWithClass = useCallback(async (name: string, selectedClass: CharacterClass, backstory: string, description?: string) => {
     if (!userId) return;
 
     try {
@@ -220,6 +220,7 @@ export function useGameState(userId: string | null) {
         max_mana: selectedClass.maxMana,
         mana: selectedClass.maxMana,
         backstory: backstory || null,
+        description: description || null,
         ...startingSkills,
       };
 

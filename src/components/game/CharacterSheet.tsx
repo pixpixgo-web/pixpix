@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { Heart, Coins, Flame, Droplets, Star, Package, Sword, Shield, Sparkles, MapPin } from 'lucide-react';
 import { StatusEffects } from './StatusEffects';
+import { ImageGenerator } from './ImageGenerator';
 import { Character, InventoryItem, ZONES, CHARACTER_CLASSES, xpForNextLevel } from '@/types/game';
 import {
   Tooltip,
@@ -169,6 +170,11 @@ export function CharacterSheet({ character, inventory }: CharacterSheetProps) {
           <TooltipContent>Magic (Spell Power)</TooltipContent>
         </Tooltip>
       </div>
+
+      {/* Image Generator */}
+      {character.description && (
+        <ImageGenerator characterDescription={character.description} />
+      )}
 
       {/* Inventory */}
       <div className="space-y-2">

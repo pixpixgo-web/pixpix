@@ -126,11 +126,11 @@ function GameInterface({ userId }: { userId: string }) {
     await processAction(action, isFreeAction);
   };
 
-  const handleClassSelection = useCallback(async (name: string, selectedClass: CharacterClass, backstory: string) => {
+  const handleClassSelection = useCallback(async (name: string, selectedClass: CharacterClass, backstory: string, description: string) => {
     setIsCreatingOrigin(true);
     try {
       // First create the character
-      await gameState.createCharacterWithClass(name, selectedClass, backstory);
+      await gameState.createCharacterWithClass(name, selectedClass, backstory, description);
 
       // Generate origin story in parallel — do NOT refreshGameState yet
       // as that would exit the creation flow before we apply updates

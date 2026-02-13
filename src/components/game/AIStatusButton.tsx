@@ -5,7 +5,6 @@ import { useAIProvider, type AIProvider } from '@/hooks/useAIProvider';
 import { Button } from '@/components/ui/button';
 
 const PROVIDER_INFO: Record<AIProvider, { label: string; icon: string; color: string }> = {
-  groq: { label: 'Groq', icon: '⚡', color: 'text-orange-400' },
   lovable: { label: 'Lovable AI', icon: '💜', color: 'text-purple-400' },
   gemini: { label: 'Google Gemini', icon: '🔵', color: 'text-blue-400' },
   openrouter: { label: 'OpenRouter', icon: '🟢', color: 'text-green-400' },
@@ -72,7 +71,7 @@ export function AIStatusButton() {
                 </button>
 
                 {/* Individual providers */}
-                {(['groq', 'lovable', 'gemini', 'openrouter'] as AIProvider[]).map(p => {
+                {(['lovable', 'gemini', 'openrouter'] as AIProvider[]).map(p => {
                   const pInfo = PROVIDER_INFO[p];
                   const available = availableProviders.includes(p);
                   const isActive = activeProvider === p;
